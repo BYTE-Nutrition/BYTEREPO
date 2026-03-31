@@ -1,5 +1,6 @@
 import type { AppState, DayData, MealItem, MealLog, MealSlot } from './types'
 import { MEAL_ORDER } from './types'
+import { totalsFromMealItems } from './aggregate'
 import { todayKey } from './dates'
 
 const STORAGE_KEY = 'byte-app-v1'
@@ -8,18 +9,6 @@ export function emptyDay(): DayData {
   const meals = {} as DayData['meals']
   for (const s of MEAL_ORDER) meals[s] = null
   return { meals, waterGlasses: 0, exerciseCalories: 0 }
-}
-
-function sumItems(items: MealItem[]) {
-  return items.reduce(
-    (a, i) => ({
-      calories: a.calories + i.calories,
-      protein: a.protein + i.protein,
-      carbs: a.carbs + i.carbs,
-      fat: a.fat + i.fat,
-    }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 },
-  )
 }
 
 function demoDay(): DayData {
@@ -103,7 +92,7 @@ function demoDay(): DayData {
     prepMin: number,
     cookMin: number,
   ): MealLog => {
-    const t = sumItems(items)
+    const t = totalsFromMealItems(items)
     const prep = new Date()
     prep.setHours(prepHour, prepMin, 0, 0)
     const done = new Date(prep.getTime() + cookMin * 60_000)

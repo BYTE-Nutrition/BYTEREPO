@@ -3,6 +3,7 @@ export type MealSlot = 'breakfast' | 'lunch' | 'snack' | 'dinner'
 export interface MealItem {
   id: string
   name: string
+  /** Portion or serving description (free text; no separate quantity field in v1). */
   amount: string
   calories: number
   protein: number

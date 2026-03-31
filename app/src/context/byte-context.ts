@@ -13,6 +13,7 @@ export interface ByteContextValue {
   setPlanStartDate: (isoDate: string) => void
   logMeal: (slot: MealSlot, log: Omit<MealLog, 'id' | 'slot'> & { id?: string }) => void
   clearMeal: (slot: MealSlot) => void
+  /** Replaces items and sets meal calories/macros to the sum of those items. */
   updateMealItems: (slot: MealSlot, items: MealItem[]) => void
   removeMealItem: (slot: MealSlot, itemId: string) => void
   addMealItem: (slot: MealSlot, item: MealItem) => void

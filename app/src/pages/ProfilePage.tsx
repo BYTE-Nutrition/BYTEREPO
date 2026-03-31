@@ -9,22 +9,28 @@ export function ProfilePage() {
 
   return (
     <div>
-      <div className="relative bg-black px-6 pb-6 pt-14 text-white">
+      <div className="relative overflow-hidden rounded-b-[2.25rem] bg-gradient-to-b from-neutral-900 to-neutral-950 px-6 pb-8 pt-14 text-white shadow-[0_16px_36px_-14px_rgba(0,0,0,0.35)]">
         <div className="relative mb-6 flex items-center justify-between">
-          <button type="button" aria-label="Back" onClick={() => navigate(-1)} className="rounded-lg p-1 hover:bg-white/10">
-            <ChevronLeft className="h-6 w-6" />
+          <button
+            type="button"
+            aria-label="Back"
+            onClick={() => navigate(-1)}
+            className="-ml-1 rounded-full p-2 text-white/80 hover:bg-white/10"
+          >
+            <ChevronLeft className="h-5 w-5" strokeWidth={1.75} />
           </button>
-          <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            <ByteLogo className="text-white" />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <ByteLogo />
           </div>
-          <div className="w-6" />
+          <div className="w-9" aria-hidden />
         </div>
-        <h1 className="text-center text-2xl font-bold">Profile</h1>
+        <p className="text-label mb-1 text-center text-white/45">You</p>
+        <h1 className="text-display-title text-center text-white">Profile</h1>
       </div>
 
       <div className="space-y-6 px-6 py-6">
         <section>
-          <h2 className="mb-3 font-semibold text-gray-900">Daily goals</h2>
+          <h2 className="text-section mb-3 text-gray-900">Daily goals</h2>
           <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
             <label className="block text-sm text-gray-600">
               Calories
@@ -66,7 +72,7 @@ export function ProfilePage() {
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-gray-900">Today</h2>
+          <h2 className="text-section mb-3 text-gray-900">Today</h2>
           <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
             <label className="block text-sm text-gray-600">
               Exercise calories burned (adds to remaining budget)
@@ -81,7 +87,7 @@ export function ProfilePage() {
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-gray-900">Plan</h2>
+          <h2 className="text-section mb-3 text-gray-900">Plan</h2>
           <div className="rounded-xl border border-gray-200 bg-white p-4">
             <label className="block text-sm text-gray-600">
               Plan start date (for week counter)

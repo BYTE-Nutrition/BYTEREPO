@@ -2,40 +2,50 @@ import { Plus, Target, TrendingUp, Utensils, User } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/components/ui/utils'
 
-const linkClass = (active: boolean) =>
-  cn('flex flex-col items-center gap-1 min-w-[3.5rem]', active ? 'text-black' : 'text-gray-400')
+const navBtn = (active: boolean) =>
+  cn(
+    'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-2 transition-all duration-200',
+    active ? 'bg-white text-neutral-950 shadow-md shadow-black/10' : 'text-white/50 hover:text-white/85',
+  )
 
 export function BottomNav() {
   const navigate = useNavigate()
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-      <div className="mx-auto flex max-w-md justify-around">
-        <NavLink to="/" end className={({ isActive }) => linkClass(isActive)}>
-          <Target className="h-6 w-6" />
-          <span className="text-xs">Home</span>
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-5 pb-[max(0.85rem,env(safe-area-inset-bottom))]">
+      <nav
+        className="pointer-events-auto relative flex w-full max-w-sm items-end gap-0.5 rounded-full border border-white/10 bg-neutral-950 px-1.5 py-1.5 shadow-[0_-10px_40px_-6px_rgba(0,0,0,0.38)] ring-1 ring-black/20"
+        aria-label="Main navigation"
+      >
+        <NavLink to="/home" className={({ isActive }) => cn(navBtn(isActive), 'pl-1')}>
+          <Target className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+          <span className="text-[10px] font-semibold tracking-wide">Home</span>
         </NavLink>
-        <NavLink to="/progress" className={({ isActive }) => linkClass(isActive)}>
-          <TrendingUp className="h-6 w-6" />
-          <span className="text-xs">Progress</span>
+        <NavLink to="/progress" className={({ isActive }) => navBtn(isActive)}>
+          <TrendingUp className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+          <span className="text-[10px] font-semibold tracking-wide">Progress</span>
         </NavLink>
-        <button
-          type="button"
-          aria-label="Log meal with voice"
-          onClick={() => navigate('/voice')}
-          className="-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-black shadow-lg"
-        >
-          <Plus className="h-7 w-7 text-white" />
-        </button>
-        <NavLink to="/meals" className={({ isActive }) => linkClass(isActive)}>
-          <Utensils className="h-6 w-6" />
-          <span className="text-xs">Meals</span>
+
+        <div className="relative flex w-[4.25rem] shrink-0 justify-center">
+          <button
+            type="button"
+            aria-label="Log meal with voice"
+            onClick={() => navigate('/voice')}
+            className="absolute -top-[1.35rem] flex h-14 w-14 items-center justify-center rounded-full bg-white text-neutral-950 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.45)] ring-[5px] ring-stone-100 transition-transform active:scale-95"
+          >
+            <Plus className="h-7 w-7" strokeWidth={2} />
+          </button>
+        </div>
+
+        <NavLink to="/meals" className={({ isActive }) => navBtn(isActive)}>
+          <Utensils className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+          <span className="text-[10px] font-semibold tracking-wide">Meals</span>
         </NavLink>
-        <NavLink to="/profile" className={({ isActive }) => linkClass(isActive)}>
-          <User className="h-6 w-6" />
-          <span className="text-xs">Profile</span>
+        <NavLink to="/profile" className={({ isActive }) => cn(navBtn(isActive), 'pr-1')}>
+          <User className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+          <span className="text-[10px] font-semibold tracking-wide">Profile</span>
         </NavLink>
-      </div>
+      </nav>
     </div>
   )
 }

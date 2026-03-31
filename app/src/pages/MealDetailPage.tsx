@@ -1,4 +1,5 @@
-import { ChevronLeft, Clock, Edit2, Trash2, Utensils } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronLeft, Clock, Edit2, Plus, Trash2, Utensils, X } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ByteLogo } from '@/components/ByteLogo'
 import { useByte } from '@/context/useByte'
@@ -15,9 +16,15 @@ function macroPercents(p: number, c: number, f: number) {
   }
 }
 
+function goToVoice(navigate: ReturnType<typeof useNavigate>, slot: MealSlot, prefill?: string) {
+  navigate(`/voice?slot=${slot}`, prefill ? { state: { prefillTranscript: prefill } } : undefined)
+}
+
 export function MealDetailPage() {
   const navigate = useNavigate()
   const { slot: slotParam } = useParams()
+  const [addSheetOpen, setAddSheetOpen] = useState(false)
+  const [addDraft, setAddDraft] = useState('')
   const slot = (MEAL_ORDER.includes(slotParam as MealSlot) ? slotParam : null) as MealSlot | null
   const { day, removeMealItem, addMealItem, clearMeal } = useByte()
 
@@ -40,7 +47,7 @@ export function MealDetailPage() {
         <button
           type="button"
           className="mt-4 rounded-xl bg-black px-4 py-3 text-white"
-          onClick={() => navigate(`/voice?slot=${slot}`)}
+          onClick={() => goToVoice(navigate, slot)}
         >
           Log with voice
         </button>
@@ -58,41 +65,52 @@ export function MealDetailPage() {
   const prep = new Date(meal.prepStarted)
   const done = new Date(meal.mealCompleted)
 
-  const handleAddItem = () => {
-    const raw = window.prompt('Describe the food item (e.g. "1 apple" or "greek yogurt"):')
-    if (!raw?.trim()) return
+  const handleSubmitAddItem = () => {
+    const raw = addDraft.trim()
+    if (!raw) return
     const parsed = parseMealFromTranscript(raw)
-    const item: MealItem =
-      parsed[0] ??
-      ({
+    if (parsed.length > 0) {
+      for (const p of parsed) {
+        addMealItem(slot, { ...p, id: crypto.randomUUID() })
+      }
+    } else {
+      const item: MealItem = {
         id: crypto.randomUUID(),
-        name: raw.trim(),
+        name: raw,
         amount: '1 serving',
         calories: 120,
         protein: 6,
         carbs: 15,
         fat: 4,
-      } as MealItem)
-    addMealItem(slot, { ...item, id: crypto.randomUUID() })
+      }
+      addMealItem(slot, item)
+    }
+    setAddDraft('')
+    setAddSheetOpen(false)
   }
 
   return (
     <div>
-      <div className="relative bg-black px-6 pb-6 pt-14 text-white">
+      <div className="relative overflow-hidden rounded-b-[2.25rem] bg-gradient-to-b from-neutral-900 to-neutral-950 px-6 pb-8 pt-14 text-white shadow-[0_16px_36px_-14px_rgba(0,0,0,0.35)]">
         <div className="relative mb-6 flex items-center justify-between">
-          <button type="button" aria-label="Back" onClick={() => navigate(-1)} className="rounded-lg p-1 hover:bg-white/10">
-            <ChevronLeft className="h-6 w-6" />
+          <button
+            type="button"
+            aria-label="Back"
+            onClick={() => navigate(-1)}
+            className="-ml-1 rounded-full p-2 text-white/80 hover:bg-white/10"
+          >
+            <ChevronLeft className="h-5 w-5" strokeWidth={1.75} />
           </button>
-          <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            <ByteLogo className="text-white" />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <ByteLogo />
           </div>
           <button
             type="button"
             aria-label="Re-log with voice"
-            onClick={() => navigate(`/voice?slot=${slot}`)}
-            className="rounded-lg p-1 hover:bg-white/10"
+            onClick={() => goToVoice(navigate, slot, meal.voiceTranscript)}
+            className="-mr-1 rounded-full p-2 text-white/80 hover:bg-white/10"
           >
-            <Edit2 className="h-5 w-5" />
+            <Edit2 className="h-5 w-5" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -100,7 +118,7 @@ export function MealDetailPage() {
           <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-white">
             <Utensils className="h-8 w-8 text-black" />
           </div>
-          <h1 className="mb-1 text-2xl font-bold">{MEAL_LABELS[slot]}</h1>
+          <h1 className="text-display-title mb-1">{MEAL_LABELS[slot]}</h1>
           <div className="flex items-center justify-center gap-2 text-sm text-gray-300">
             <Clock className="h-4 w-4" />
             <span>{meal.timeRangeLabel}</span>
@@ -110,14 +128,14 @@ export function MealDetailPage() {
 
       <div className="border-b border-gray-100 bg-white px-6 py-6">
         <div className="mb-4 text-center">
-          <div className="mb-2 text-5xl font-bold tabular-nums text-gray-900">{meal.calories}</div>
+          <div className="text-display-hero mb-2 tabular-nums text-gray-900">{meal.calories}</div>
           <div className="text-sm text-gray-500">Total Calories</div>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
           {mealMacros.map((macro) => (
             <div key={macro.name} className="rounded-lg bg-gray-50 p-3 text-center">
-              <div className="mb-1 text-2xl font-bold tabular-nums text-gray-900">{macro.amount}g</div>
+              <div className="text-stat mb-1 tabular-nums text-gray-900">{macro.amount}g</div>
               <div className="mb-2 text-xs text-gray-500">{macro.name}</div>
               <div className={`h-1.5 w-full rounded-full ${macro.color}`} />
               <div className="mt-1 text-xs text-gray-400">{macro.percentage}%</div>
@@ -126,11 +144,32 @@ export function MealDetailPage() {
         </div>
       </div>
 
+      {meal.voiceTranscript && (
+        <div className="border-b border-gray-100 px-6 py-5">
+          <p className="text-label mb-2 text-gray-400">Original description</p>
+          <p className="text-sm leading-relaxed text-gray-700">&ldquo;{meal.voiceTranscript}&rdquo;</p>
+          <button
+            type="button"
+            onClick={() => goToVoice(navigate, slot, meal.voiceTranscript)}
+            className="mt-3 text-sm font-medium text-blue-600"
+          >
+            Edit description &amp; re-review
+          </button>
+        </div>
+      )}
+
       <div className="px-6 py-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">Ingredients</h2>
-          <button type="button" onClick={handleAddItem} className="text-sm font-medium text-blue-500">
-            Add Item
+          <h2 className="text-section text-gray-900">Ingredients</h2>
+          <button
+            type="button"
+            onClick={() => {
+              setAddDraft('')
+              setAddSheetOpen(true)
+            }}
+            className="text-sm font-medium text-blue-600"
+          >
+            Add item
           </button>
         </div>
 
@@ -180,14 +219,69 @@ export function MealDetailPage() {
             if (window.confirm(`Clear ${MEAL_LABELS[slot]} for today?`)) clearMeal(slot)
             navigate('/meals')
           }}
-          className="mt-6 w-full rounded-xl border border-red-200 py-3 text-sm font-medium text-red-600"
+          className="mt-6 w-full rounded-xl border border-red-200 bg-white py-3 text-sm font-medium text-red-600 shadow-sm ring-1 ring-red-100"
         >
           Clear this meal
         </button>
       </div>
 
+      {addSheetOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-[2px]">
+          <button
+            type="button"
+            aria-label="Close"
+            className="absolute inset-0 cursor-default"
+            onClick={() => setAddSheetOpen(false)}
+          />
+          <div
+            className="relative z-10 mx-auto w-full max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl ring-1 ring-black/5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-section text-gray-900">Add ingredient</h3>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setAddSheetOpen(false)}
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mb-3 text-sm text-gray-500">
+              Describe one or more foods. We&apos;ll match them to estimates—same as voice logging.
+            </p>
+            <textarea
+              value={addDraft}
+              onChange={(e) => setAddDraft(e.target.value)}
+              rows={4}
+              placeholder='e.g. "1 apple" or "greek yogurt and berries"'
+              className="mb-4 min-h-28 w-full rounded-xl border border-gray-200 bg-gray-50/80 p-4 text-base text-gray-900 placeholder:text-gray-400 focus:border-gray-300 focus:outline-none focus:ring-2 focus:ring-black/15"
+            />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setAddSheetOpen(false)}
+                className="flex-1 rounded-xl border border-gray-200 bg-white py-3.5 text-sm font-medium text-gray-800 shadow-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitAddItem}
+                disabled={!addDraft.trim()}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-black py-3.5 text-sm font-medium text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="px-6 pb-24">
-        <h2 className="mb-4 font-semibold text-gray-900">Cooking Timeline</h2>
+        <h2 className="text-section mb-4 text-gray-900">Cooking Timeline</h2>
         <div className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 p-4">
           <div className="space-y-3">
             <div className="flex items-center gap-3">

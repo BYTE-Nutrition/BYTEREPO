@@ -1,4 +1,5 @@
 import type { MealItem } from './types'
+import { totalsFromMealItems } from './aggregate'
 
 interface FoodEntry {
   name: string
@@ -422,15 +423,7 @@ export function parseMealFromTranscript(raw: string): MealItem[] {
 }
 
 export function sumMealItems(items: MealItem[]) {
-  return items.reduce(
-    (a, i) => ({
-      calories: a.calories + i.calories,
-      protein: a.protein + i.protein,
-      carbs: a.carbs + i.carbs,
-      fat: a.fat + i.fat,
-    }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 },
-  )
+  return totalsFromMealItems(items)
 }
 
 export const QUICK_SUGGESTIONS = [

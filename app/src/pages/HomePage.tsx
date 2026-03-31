@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { ByteLogo } from '@/components/ByteLogo'
-import { Progress } from '@/components/ui/progress'
+import { RingProgress } from '@/components/ui/ring-progress'
 import { useByte } from '@/context/useByte'
 import { dayNutritionTotals } from '@/lib/aggregate'
 import { MEAL_LABELS, MEAL_ORDER, type MealSlot } from '@/lib/types'
@@ -36,103 +36,130 @@ export function HomePage() {
       name: 'Protein',
       current: totals.protein,
       goal: goals.proteinGoal,
-      color: 'bg-blue-500',
+      ring: 'text-teal-500',
       unit: 'g',
     },
     {
       name: 'Carbs',
       current: totals.carbs,
       goal: goals.carbsGoal,
-      color: 'bg-green-500',
+      ring: 'text-amber-500',
       unit: 'g',
     },
     {
       name: 'Fat',
       current: totals.fat,
       goal: goals.fatGoal,
-      color: 'bg-orange-500',
+      ring: 'text-rose-400',
       unit: 'g',
     },
   ]
 
   return (
     <div>
-      <div className="relative bg-black px-6 pb-6 pt-14 text-white">
-        <div className="relative mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm">
-            <TrendingUp className="h-4 w-4" />
+      <div className="relative overflow-hidden rounded-b-[2.25rem] bg-gradient-to-b from-neutral-900 via-neutral-950 to-neutral-950 px-6 pb-10 pt-14 text-white shadow-[0_24px_48px_-20px_rgba(0,0,0,0.45)]">
+        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-amber-400/10 blur-3xl" aria-hidden />
+        <div className="absolute -bottom-8 -left-12 h-40 w-40 rounded-full bg-white/5 blur-2xl" aria-hidden />
+
+        <div className="relative mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 ring-1 ring-white/15 backdrop-blur-sm">
+            <TrendingUp className="h-3.5 w-3.5 text-amber-300/90" strokeWidth={2} />
             <span>Week {weekNumber}</span>
           </div>
-          <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            <ByteLogo className="text-white" />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <ByteLogo />
           </div>
-          <div className="w-20" />
+          <div className="w-[4.5rem]" aria-hidden />
         </div>
 
-        <div className="text-center">
-          <div className="mb-2 text-5xl tabular-nums">{Math.round(caloriesRemaining)}</div>
-          <div className="mb-4 text-sm text-gray-300">Calories Remaining</div>
+        <div className="relative flex flex-col items-center text-center">
+          <RingProgress
+            value={totals.calories}
+            max={calorieGoal}
+            size={200}
+            strokeWidth={13}
+            trackClassName="text-white/[0.14]"
+            progressClassName="text-amber-300"
+            className="mb-8"
+          >
+            <div className="text-display-hero tabular-nums text-white">{Math.round(caloriesRemaining)}</div>
+            <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
+              Calories left
+            </div>
+            <div className="mt-2 text-xs tabular-nums text-white/55">{Math.round(progressPercentage)}% of goal</div>
+          </RingProgress>
 
-          <div className="flex justify-center gap-8 text-sm">
+          <div className="flex w-full max-w-[17.5rem] justify-between gap-4 text-sm tabular-nums">
             <div>
-              <div className="text-gray-400">Goal</div>
-              <div>{calorieGoal}</div>
+              <div className="text-label mb-1 text-white/40">Goal</div>
+              <div className="font-medium text-white">{calorieGoal}</div>
             </div>
             <div>
-              <div className="text-gray-400">Food</div>
-              <div className="text-green-400">{Math.round(totals.calories)}</div>
+              <div className="text-label mb-1 text-white/40">Food</div>
+              <div className="font-medium text-amber-200/95">{Math.round(totals.calories)}</div>
             </div>
             <div>
-              <div className="text-gray-400">Exercise</div>
-              <div className="text-orange-400">{exercise}</div>
+              <div className="text-label mb-1 text-white/40">Exercise</div>
+              <div className="font-medium text-teal-300/90">{exercise}</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="border-b border-gray-100 bg-white px-6 py-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">Daily Progress</h2>
-          <span className="text-sm text-gray-500">{Math.round(progressPercentage)}%</span>
+      <div className="px-6 py-8">
+        <div className="mb-5 flex items-end justify-between">
+          <div>
+            <p className="text-label mb-1 text-stone-400">Today</p>
+            <h2 className="text-section text-stone-900">Macro balance</h2>
+          </div>
         </div>
-        <Progress value={progressPercentage} className="mb-4 h-2" />
 
         <div className="grid grid-cols-3 gap-3">
-          {macros.map((macro) => (
-            <div key={macro.name} className="rounded-lg bg-gray-50 p-3">
-              <div className="mb-1 text-xs text-gray-500">{macro.name}</div>
-              <div className="mb-1 text-lg font-semibold tabular-nums">
-                {Math.round(macro.current)}
-                <span className="text-xs text-gray-400">
-                  /{macro.goal}
-                  {macro.unit}
-                </span>
+          {macros.map((macro) => {
+            const pct = Math.min(100, (macro.current / macro.goal) * 100)
+            return (
+              <div
+                key={macro.name}
+                className="flex flex-col items-center rounded-3xl bg-white py-5 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] ring-1 ring-stone-200/80"
+              >
+                <RingProgress
+                  value={macro.current}
+                  max={macro.goal}
+                  size={80}
+                  strokeWidth={5}
+                  trackClassName="text-stone-200"
+                  progressClassName={macro.ring}
+                >
+                  <div className="text-base font-semibold tabular-nums leading-none text-stone-900">
+                    {Math.round(macro.current)}
+                  </div>
+                  <div className="mt-0.5 text-[9px] font-medium tabular-nums text-stone-400">
+                    /{macro.goal}
+                    {macro.unit}
+                  </div>
+                </RingProgress>
+                <div className="mt-3 text-center text-[11px] font-semibold text-stone-500">{macro.name}</div>
+                <div className="mt-0.5 text-[10px] tabular-nums text-stone-400">{Math.round(pct)}%</div>
               </div>
-              <div className="h-1.5 w-full rounded-full bg-gray-200">
-                <div
-                  className={`${macro.color} h-1.5 rounded-full`}
-                  style={{ width: `${Math.min(100, (macro.current / macro.goal) * 100)}%` }}
-                />
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
-      <div className="px-6 py-6">
-        <h2 className="mb-4 font-semibold text-gray-900">Today&apos;s Meals</h2>
+      <div className="px-6 pb-6">
+        <h2 className="text-section mb-4 text-stone-900">Today&apos;s meals</h2>
 
         <button
           type="button"
           onClick={() => navigate('/voice')}
-          className="mb-6 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-5 py-5 text-left text-white shadow-xl transition-all hover:shadow-2xl active:scale-95"
+          className="mb-6 flex w-full items-center gap-4 rounded-3xl bg-neutral-950 px-5 py-5 text-left text-white shadow-[0_20px_40px_-16px_rgba(0,0,0,0.55)] ring-1 ring-white/10 transition-transform active:scale-[0.99]"
         >
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20">
-            <Mic className="h-7 w-7" />
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/12 ring-1 ring-white/20">
+            <Mic className="h-7 w-7 text-amber-200" strokeWidth={1.75} />
           </div>
-          <div>
-            <div className="text-xl font-bold">Start Cooking</div>
-            <div className="text-sm text-blue-100">Log your meal with voice</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-lg font-semibold tracking-tight">Log with voice</div>
+            <div className="text-sm text-white/55">Speak or type—review before saving</div>
           </div>
         </button>
 
@@ -146,41 +173,43 @@ export function HomePage() {
                 type="button"
                 key={slot}
                 onClick={() => (empty ? navigate(`/voice?slot=${slot}`) : navigate(`/meals/${slot}`))}
-                className={`w-full rounded-xl border p-4 text-left ${
-                  empty ? 'border-dashed border-gray-300 bg-white' : 'border-gray-200 bg-white'
+                className={`w-full rounded-3xl p-4 text-left shadow-[0_6px_24px_-10px_rgba(0,0,0,0.1)] ring-1 transition-colors ${
+                  empty
+                    ? 'border border-dashed border-stone-200/80 bg-white/70 ring-stone-200/60'
+                    : 'border-0 bg-white ring-stone-200/80'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                        empty ? 'bg-gray-100' : 'bg-black'
+                      className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
+                        empty ? 'bg-stone-100 text-stone-400' : 'bg-neutral-950 text-white shadow-md'
                       }`}
                     >
-                      <Icon className={`h-5 w-5 ${empty ? 'text-gray-400' : 'text-white'}`} />
+                      <Icon className="h-5 w-5" strokeWidth={1.75} />
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">{MEAL_LABELS[slot]}</div>
-                      <div className="text-sm text-gray-500">
+                      <div className="font-medium text-stone-900">{MEAL_LABELS[slot]}</div>
+                      <div className="text-sm text-stone-500">
                         {empty ? 'Not logged' : meal.timeRangeLabel}
                       </div>
                     </div>
                   </div>
                   {empty ? (
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black">
-                      <Plus className="h-4 w-4 text-white" />
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-950 text-white shadow-md">
+                      <Plus className="h-4 w-4" strokeWidth={2.5} />
                     </span>
                   ) : (
                     <div className="text-right">
-                      <div className="font-semibold text-gray-900 tabular-nums">{meal.calories}</div>
-                      <div className="text-xs text-gray-500">cal</div>
+                      <div className="font-semibold tabular-nums text-stone-900">{meal.calories}</div>
+                      <div className="text-xs text-stone-400">cal</div>
                     </div>
                   )}
                 </div>
                 {!empty && meal.items.length > 0 && (
-                  <div className="mt-3 pl-[3.25rem]">
+                  <div className="mt-3 pl-14">
                     {meal.items.map((item) => (
-                      <div key={item.id} className="text-sm text-gray-600">
+                      <div key={item.id} className="text-sm text-stone-600">
                         • {item.name} ({item.amount})
                       </div>
                     ))}
@@ -192,28 +221,41 @@ export function HomePage() {
         </div>
       </div>
 
-      <div className="px-6 pb-6">
-        <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 p-5">
-          <div className="mb-4 flex items-center justify-between">
+      <div className="px-6 pb-8">
+        <div className="rounded-3xl bg-white p-6 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.1)] ring-1 ring-stone-200/80">
+          <div className="mb-5 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Droplet className="h-5 w-5 text-blue-500" />
-              <h2 className="font-semibold text-gray-900">Water Intake</h2>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/10 text-sky-600 ring-1 ring-sky-500/20">
+                <Droplet className="h-5 w-5" strokeWidth={1.75} />
+              </div>
+              <div>
+                <h2 className="text-section text-stone-900">Water</h2>
+                <p className="text-xs text-stone-500">{day.waterGlasses} of 8 glasses</p>
+              </div>
             </div>
-            <span className="text-sm text-gray-600">{day.waterGlasses}/8 glasses</span>
+            <span className="text-sm font-semibold tabular-nums text-stone-700">
+              {Math.round((day.waterGlasses / 8) * 100)}%
+            </span>
           </div>
-          <div className="flex gap-2">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setWaterGlasses(i + 1)}
-                className={`h-10 flex-1 rounded-lg transition-all ${
-                  i < day.waterGlasses ? 'bg-blue-500 shadow-md' : 'border border-blue-200 bg-white/60'
-                }`}
-              >
-                {i < day.waterGlasses && <Droplet className="mx-auto h-4 w-4 text-white" fill="white" />}
-              </button>
-            ))}
+          <div className="flex justify-center gap-2.5">
+            {Array.from({ length: 8 }).map((_, i) => {
+              const filled = i < day.waterGlasses
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setWaterGlasses(i + 1)}
+                  aria-label={`Set water to ${i + 1} glasses`}
+                  className={`flex h-11 w-11 items-center justify-center rounded-full border-2 transition-all ${
+                    filled
+                      ? 'border-sky-400 bg-sky-500 text-white shadow-md shadow-sky-500/30 ring-2 ring-sky-300/40 ring-offset-2 ring-offset-white'
+                      : 'border-stone-200 bg-stone-50/80 text-stone-200 hover:border-stone-300'
+                  }`}
+                >
+                  {filled && <Droplet className="h-4 w-4 shrink-0 text-white" fill="currentColor" />}
+                </button>
+              )
+            })}
           </div>
         </div>
       </div>

@@ -1,21 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { AppState, DayData, Goals, MealItem, MealLog, MealSlot } from '@/lib/types'
 import { MEAL_ORDER } from '@/lib/types'
+import { totalsFromMealItems } from '@/lib/aggregate'
 import { createInitialState, emptyDay, ensureDay, loadState, saveState } from '@/lib/storage'
 import { formatRange, planWeekNumber, todayKey } from '@/lib/dates'
 import { ByteContext, type ByteContextValue } from './byte-context'
-
-function recomputeMealTotals(items: MealItem[]): Pick<MealLog, 'calories' | 'protein' | 'carbs' | 'fat'> {
-  return items.reduce(
-    (a, i) => ({
-      calories: a.calories + i.calories,
-      protein: a.protein + i.protein,
-      carbs: a.carbs + i.carbs,
-      fat: a.fat + i.fat,
-    }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 },
-  )
-}
 
 export function ByteProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>(() => loadState())
@@ -77,6 +66,7 @@ export function ByteProvider({ children }: { children: ReactNode }) {
           prepStarted: log.prepStarted || prep.toISOString(),
           mealCompleted: log.mealCompleted || done.toISOString(),
         }
+        Object.assign(full, totalsFromMealItems(full.items))
         d.meals[slot] = full
         return next
       })
@@ -101,7 +91,7 @@ export function ByteProvider({ children }: { children: ReactNode }) {
         const next = structuredClone(s)
         const m = ensureDay(next, tk).meals[slot]
         if (!m) return s
-        const t = recomputeMealTotals(items)
+        const t = totalsFromMealItems(items)
         m.items = items
         Object.assign(m, t)
         return next
@@ -117,7 +107,7 @@ export function ByteProvider({ children }: { children: ReactNode }) {
         const m = ensureDay(next, tk).meals[slot]
         if (!m) return s
         const items = m.items.filter((i) => i.id !== itemId)
-        const t = recomputeMealTotals(items)
+        const t = totalsFromMealItems(items)
         m.items = items
         Object.assign(m, t)
         return next
@@ -133,7 +123,7 @@ export function ByteProvider({ children }: { children: ReactNode }) {
         const m = ensureDay(next, tk).meals[slot]
         if (!m) return s
         const items = [...m.items, item]
-        const t = recomputeMealTotals(items)
+        const t = totalsFromMealItems(items)
         m.items = items
         Object.assign(m, t)
         return next

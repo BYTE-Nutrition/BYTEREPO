@@ -17,24 +17,30 @@ export function MealsPage() {
 
   return (
     <div>
-      <div className="relative bg-black px-6 pb-6 pt-14 text-white">
+      <div className="relative overflow-hidden rounded-b-[2.25rem] bg-gradient-to-b from-neutral-900 to-neutral-950 px-6 pb-8 pt-14 text-white shadow-[0_16px_36px_-14px_rgba(0,0,0,0.35)]">
         <div className="relative mb-6 flex items-center justify-between">
-          <button type="button" aria-label="Back" onClick={() => navigate(-1)} className="rounded-lg p-1 hover:bg-white/10">
-            <ChevronLeft className="h-6 w-6" />
+          <button
+            type="button"
+            aria-label="Back"
+            onClick={() => navigate(-1)}
+            className="-ml-1 rounded-full p-2 text-white/80 hover:bg-white/10"
+          >
+            <ChevronLeft className="h-5 w-5" strokeWidth={1.75} />
           </button>
-          <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            <ByteLogo className="text-white" />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <ByteLogo />
           </div>
           <button
             type="button"
             aria-label="Add meal"
             onClick={() => navigate('/voice')}
-            className="rounded-lg p-1 hover:bg-white/10"
+            className="-mr-1 rounded-full p-2 text-white/80 hover:bg-white/10"
           >
-            <Plus className="h-6 w-6" />
+            <Plus className="h-5 w-5" strokeWidth={1.75} />
           </button>
         </div>
-        <h1 className="text-center text-2xl font-bold">Meals</h1>
+        <p className="text-label mb-1 text-center text-white/45">Today</p>
+        <h1 className="text-display-title text-center text-white">Meals</h1>
       </div>
 
       <div className="space-y-3 px-6 py-6">
@@ -47,27 +53,29 @@ export function MealsPage() {
               type="button"
               key={slot}
               onClick={() => (empty ? navigate(`/voice?slot=${slot}`) : navigate(`/meals/${slot}`))}
-              className={`flex w-full items-center justify-between rounded-xl border p-4 text-left ${
-                empty ? 'border-dashed border-gray-300' : 'border-gray-200 bg-white'
+              className={`flex w-full items-center justify-between rounded-3xl p-4 text-left shadow-[0_6px_24px_-10px_rgba(0,0,0,0.1)] ring-1 ${
+                empty
+                  ? 'border border-dashed border-stone-200/80 bg-white/70 ring-stone-200/60'
+                  : 'border-0 bg-white ring-stone-200/80'
               }`}
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                    empty ? 'bg-gray-100' : 'bg-black'
+                  className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
+                    empty ? 'bg-stone-100 text-stone-400' : 'bg-neutral-950 text-white shadow-md'
                   }`}
                 >
-                  <Icon className={`h-5 w-5 ${empty ? 'text-gray-400' : 'text-white'}`} />
+                  <Icon className="h-5 w-5" strokeWidth={1.75} />
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900">{MEAL_LABELS[slot]}</div>
-                  <div className="text-sm text-gray-500">{empty ? 'Not logged' : meal.timeRangeLabel}</div>
+                  <div className="font-medium text-stone-900">{MEAL_LABELS[slot]}</div>
+                  <div className="text-sm text-stone-500">{empty ? 'Not logged' : meal.timeRangeLabel}</div>
                 </div>
               </div>
               {!empty && (
                 <div className="text-right">
-                  <div className="font-semibold tabular-nums text-gray-900">{meal.calories}</div>
-                  <div className="text-xs text-gray-500">cal</div>
+                  <div className="font-semibold tabular-nums text-stone-900">{meal.calories}</div>
+                  <div className="text-xs text-stone-400">cal</div>
                 </div>
               )}
             </button>
