@@ -1,13 +1,4 @@
-import {
-  Apple,
-  Coffee,
-  Cookie,
-  Droplet,
-  Mic,
-  Plus,
-  TrendingUp,
-  Utensils,
-} from 'lucide-react'
+import { Apple, Coffee, Cookie, Droplet, Plus, TrendingUp, Utensils } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { ByteLogo } from '@/components/ByteLogo'
 import { RingProgress } from '@/components/ui/ring-progress'
@@ -24,7 +15,8 @@ const SLOT_ICONS: Record<MealSlot, typeof Coffee> = {
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { day, goals, weekNumber, setWaterGlasses } = useByte()
+  const { state, day, goals, weekNumber, setWaterGlasses } = useByte()
+  const firstName = state.profile.name.trim().split(/\s+/)[0] ?? ''
   const totals = dayNutritionTotals(day)
   const exercise = day.exerciseCalories
   const calorieGoal = goals.calorieGoal
@@ -73,6 +65,9 @@ export function HomePage() {
         </div>
 
         <div className="relative flex flex-col items-center text-center">
+          <p className="mb-5 text-[15px] font-medium tracking-tight text-white/80">
+            {firstName ? `Hey, ${firstName}` : 'Hey there'}
+          </p>
           <RingProgress
             value={totals.calories}
             max={calorieGoal}
@@ -148,20 +143,6 @@ export function HomePage() {
 
       <div className="px-6 pb-6">
         <h2 className="text-section mb-4 text-stone-900">Today&apos;s meals</h2>
-
-        <button
-          type="button"
-          onClick={() => navigate('/voice')}
-          className="mb-6 flex w-full items-center gap-4 rounded-3xl bg-neutral-950 px-5 py-5 text-left text-white shadow-[0_20px_40px_-16px_rgba(0,0,0,0.55)] ring-1 ring-white/10 transition-transform active:scale-[0.99]"
-        >
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/12 ring-1 ring-white/20">
-            <Mic className="h-7 w-7 text-amber-200" strokeWidth={1.75} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-lg font-semibold tracking-tight">Log with voice</div>
-            <div className="text-sm text-white/55">Speak or type—review before saving</div>
-          </div>
-        </button>
 
         <div className="space-y-3">
           {MEAL_ORDER.map((slot) => {

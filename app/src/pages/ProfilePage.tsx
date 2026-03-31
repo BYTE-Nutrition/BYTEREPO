@@ -2,10 +2,22 @@ import { ChevronLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { ByteLogo } from '@/components/ByteLogo'
 import { useByte } from '@/context/useByte'
+import { USER_GOAL_OPTIONS } from '@/lib/goalsFromProfile'
+import type { UserGoal } from '@/lib/types'
+
 export function ProfilePage() {
   const navigate = useNavigate()
-  const { state, goals, day, setGoals, setExerciseCalories, setPlanStartDate, resetToDemo, clearAllData } =
-    useByte()
+  const {
+    state,
+    goals,
+    day,
+    setGoals,
+    setExerciseCalories,
+    setPlanStartDate,
+    updateProfile,
+    resetToDemo,
+    clearAllData,
+  } = useByte()
 
   return (
     <div>
@@ -29,6 +41,52 @@ export function ProfilePage() {
       </div>
 
       <div className="space-y-6 px-6 py-6">
+        <section>
+          <h2 className="text-section mb-3 text-gray-900">About you</h2>
+          <p className="mb-3 text-xs text-gray-500">
+            Changing age or goal recalculates calorie and protein targets (you can still edit numbers below).
+          </p>
+          <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
+            <label className="block text-sm text-gray-600">
+              Name
+              <input
+                type="text"
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2"
+                value={state.profile.name}
+                onChange={(e) => updateProfile({ name: e.target.value })}
+              />
+            </label>
+            <label className="block text-sm text-gray-600">
+              Age
+              <select
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2"
+                value={state.profile.age}
+                onChange={(e) => updateProfile({ age: Number(e.target.value) || 30 })}
+              >
+                {Array.from({ length: 88 }, (_, i) => i + 13).map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm text-gray-600">
+              Main goal
+              <select
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2"
+                value={state.profile.goal}
+                onChange={(e) => updateProfile({ goal: e.target.value as UserGoal })}
+              >
+                {USER_GOAL_OPTIONS.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </section>
+
         <section>
           <h2 className="text-section mb-3 text-gray-900">Daily goals</h2>
           <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
@@ -115,7 +173,14 @@ export function ProfilePage() {
           <button
             type="button"
             onClick={() => {
-              if (window.confirm('Erase all saved days and goals on this device?')) clearAllData()
+              if (
+                window.confirm(
+                  'Erase all data and start the setup flow again? This cannot be undone.',
+                )
+              ) {
+                clearAllData()
+                navigate('/onboarding', { replace: true })
+              }
             }}
             className="w-full rounded-xl border border-gray-300 py-3 font-medium text-gray-800"
           >

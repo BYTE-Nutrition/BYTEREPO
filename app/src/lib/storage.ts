@@ -1,9 +1,33 @@
-import type { AppState, DayData, MealItem, MealLog, MealSlot } from './types'
+import type { AppState, DayData, MealItem, MealLog, MealSlot, UserGoal, UserProfile } from './types'
 import { MEAL_ORDER } from './types'
 import { totalsFromMealItems } from './aggregate'
+import { computeGoalsFromProfile } from './goalsFromProfile'
 import { todayKey } from './dates'
 
 const STORAGE_KEY = 'byte-app-v1'
+
+const USER_GOALS: UserGoal[] = [
+  'weight_loss',
+  'weight_gain',
+  'muscle_gain',
+  'maintenance',
+  'cooking',
+  'general_health',
+]
+
+function normalizeGoal(g: unknown): UserGoal {
+  return typeof g === 'string' && USER_GOALS.includes(g as UserGoal) ? (g as UserGoal) : 'maintenance'
+}
+
+const defaultProfile: UserProfile = {
+  name: '',
+  age: 30,
+  goal: 'maintenance',
+}
+
+function defaultGoalsFromProfile(p: UserProfile) {
+  return computeGoalsFromProfile(p.age, p.goal)
+}
 
 export function emptyDay(): DayData {
   const meals = {} as DayData['meals']
@@ -120,24 +144,58 @@ function demoDay(): DayData {
   return { meals, waterGlasses: 6, exerciseCalories: 0 }
 }
 
+/** New install: onboarding required, empty today, placeholder goals until onboarding finishes. */
+export function createFreshOnboardingState(): AppState {
+  const t = todayKey()
+  const profile = { ...defaultProfile }
+  return {
+    onboardingComplete: false,
+    profile,
+    planStartDate: t,
+    goals: defaultGoalsFromProfile(profile),
+    days: { [t]: emptyDay() },
+  }
+}
+
+/** Demo / reset: skip onboarding, sample data. */
 export function createInitialState(): AppState {
   const t = todayKey()
   const start = new Date()
   start.setDate(start.getDate() - 14)
   const planStart = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
 
+  const profile: UserProfile = {
+    name: 'Alex',
+    age: 28,
+    goal: 'maintenance',
+  }
+
   return {
+    onboardingComplete: true,
+    profile,
     planStartDate: planStart,
-    goals: {
-      calorieGoal: 2000,
-      proteinGoal: 150,
-      carbsGoal: 250,
-      fatGoal: 67,
-    },
+    goals: defaultGoalsFromProfile(profile),
     days: {
       [t]: demoDay(),
     },
   }
+}
+
+function migrateParsed(parsed: AppState): AppState {
+  const next = { ...parsed }
+  if (typeof next.onboardingComplete !== 'boolean') {
+    next.onboardingComplete = true
+  }
+  if (!next.profile || typeof next.profile.name !== 'string') {
+    next.profile = { ...defaultProfile }
+  } else {
+    next.profile = {
+      name: next.profile.name,
+      age: typeof next.profile.age === 'number' && next.profile.age >= 13 ? next.profile.age : 30,
+      goal: normalizeGoal(next.profile.goal),
+    }
+  }
+  return next
 }
 
 export function loadState(): AppState {
@@ -145,12 +203,12 @@ export function loadState(): AppState {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as AppState
-      if (parsed.days && parsed.goals) return parsed
+      if (parsed.days && parsed.goals) return migrateParsed(parsed)
     }
   } catch {
     /* ignore */
   }
-  return createInitialState()
+  return createFreshOnboardingState()
 }
 
 export function saveState(state: AppState): void {

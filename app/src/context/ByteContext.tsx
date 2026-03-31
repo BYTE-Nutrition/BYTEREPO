@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { AppState, DayData, Goals, MealItem, MealLog, MealSlot } from '@/lib/types'
-import { MEAL_ORDER } from '@/lib/types'
+import type { AppState, Goals, MealItem, MealLog, MealSlot, UserProfile } from '@/lib/types'
 import { totalsFromMealItems } from '@/lib/aggregate'
-import { createInitialState, emptyDay, ensureDay, loadState, saveState } from '@/lib/storage'
+import { computeGoalsFromProfile } from '@/lib/goalsFromProfile'
+import {
+  createFreshOnboardingState,
+  createInitialState,
+  emptyDay,
+  ensureDay,
+  loadState,
+  saveState,
+} from '@/lib/storage'
 import { formatRange, planWeekNumber, todayKey } from '@/lib/dates'
 import { ByteContext, type ByteContextValue } from './byte-context'
 
@@ -49,6 +56,27 @@ export function ByteProvider({ children }: { children: ReactNode }) {
 
   const setPlanStartDate = useCallback((isoDate: string) => {
     setState((s) => ({ ...s, planStartDate: isoDate }))
+  }, [])
+
+  const updateProfile = useCallback((p: Partial<UserProfile>) => {
+    setState((s) => {
+      const profile = { ...s.profile, ...p }
+      const recalc = 'age' in p || 'goal' in p
+      const goals = recalc ? computeGoalsFromProfile(profile.age, profile.goal) : s.goals
+      return { ...s, profile, goals }
+    })
+  }, [])
+
+  const completeOnboarding = useCallback((profile: UserProfile) => {
+    const t = todayKey()
+    const goals = computeGoalsFromProfile(profile.age, profile.goal)
+    setState({
+      onboardingComplete: true,
+      profile,
+      planStartDate: t,
+      goals,
+      days: { [t]: emptyDay() },
+    })
   }, [])
 
   const logMeal = useCallback(
@@ -137,19 +165,7 @@ export function ByteProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const clearAllData = useCallback(() => {
-    const t = todayKey()
-    const meals = Object.fromEntries(MEAL_ORDER.map((x) => [x, null])) as DayData['meals']
-    const empty: DayData = { meals, waterGlasses: 0, exerciseCalories: 0 }
-    setState({
-      planStartDate: t,
-      goals: {
-        calorieGoal: 2000,
-        proteinGoal: 150,
-        carbsGoal: 250,
-        fatGoal: 67,
-      },
-      days: { [t]: empty },
-    })
+    setState(createFreshOnboardingState())
   }, [])
 
   const value = useMemo<ByteContextValue>(
@@ -163,6 +179,8 @@ export function ByteProvider({ children }: { children: ReactNode }) {
       setExerciseCalories,
       setGoals,
       setPlanStartDate,
+      updateProfile,
+      completeOnboarding,
       logMeal,
       clearMeal,
       updateMealItems,
@@ -180,6 +198,8 @@ export function ByteProvider({ children }: { children: ReactNode }) {
       setExerciseCalories,
       setGoals,
       setPlanStartDate,
+      updateProfile,
+      completeOnboarding,
       logMeal,
       clearMeal,
       updateMealItems,

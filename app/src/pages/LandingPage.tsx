@@ -1,16 +1,19 @@
 import { useEffect } from 'react'
 import logo from '../assets/byte-logo.jpg'
 import { useNavigate } from 'react-router-dom'
+import { useByte } from '@/context/useByte'
 
-const SPLASH_MS = 2600
+const SPLASH_MS = 2200
 
 export function LandingPage() {
   const navigate = useNavigate()
+  const { state } = useByte()
 
   useEffect(() => {
-    const t = window.setTimeout(() => navigate('/home', { replace: true }), SPLASH_MS)
+    const next = state.onboardingComplete ? '/home' : '/onboarding'
+    const t = window.setTimeout(() => navigate(next, { replace: true }), SPLASH_MS)
     return () => window.clearTimeout(t)
-  }, [navigate])
+  }, [navigate, state.onboardingComplete])
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-white px-8">

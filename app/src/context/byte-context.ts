@@ -1,5 +1,5 @@
 import { createContext } from 'react'
-import type { AppState, DayData, Goals, MealItem, MealLog, MealSlot } from '@/lib/types'
+import type { AppState, DayData, Goals, MealItem, MealLog, MealSlot, UserProfile } from '@/lib/types'
 
 export interface ByteContextValue {
   state: AppState
@@ -11,6 +11,9 @@ export interface ByteContextValue {
   setExerciseCalories: (n: number) => void
   setGoals: (g: Partial<Goals>) => void
   setPlanStartDate: (isoDate: string) => void
+  /** Merge profile fields; recalculates calorie/protein goals when age or goal changes. */
+  updateProfile: (p: Partial<UserProfile>) => void
+  completeOnboarding: (profile: UserProfile) => void
   logMeal: (slot: MealSlot, log: Omit<MealLog, 'id' | 'slot'> & { id?: string }) => void
   clearMeal: (slot: MealSlot) => void
   /** Replaces items and sets meal calories/macros to the sum of those items. */

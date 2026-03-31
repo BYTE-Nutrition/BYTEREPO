@@ -1,4 +1,4 @@
-import { Plus, Target, TrendingUp, Utensils, User } from 'lucide-react'
+import { Mic, Target, TrendingUp, Utensils, User } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/components/ui/utils'
 
@@ -26,14 +26,14 @@ export function BottomNav() {
           <span className="text-[10px] font-semibold tracking-wide">Progress</span>
         </NavLink>
 
-        <div className="relative flex w-[4.25rem] shrink-0 justify-center">
+        <div className="relative flex w-[5.5rem] shrink-0 justify-center">
           <button
             type="button"
             aria-label="Log meal with voice"
             onClick={() => navigate('/voice')}
-            className="absolute -top-[1.35rem] flex h-14 w-14 items-center justify-center rounded-full bg-white text-neutral-950 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.45)] ring-[5px] ring-stone-100 transition-transform active:scale-95"
+            className="absolute -top-[1.65rem] flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-neutral-950 shadow-[0_14px_32px_-8px_rgba(0,0,0,0.5)] ring-[6px] ring-stone-100 transition-transform active:scale-95"
           >
-            <Plus className="h-7 w-7" strokeWidth={2} />
+            <Mic className="h-9 w-9 text-amber-200" strokeWidth={2} />
           </button>
         </div>
 

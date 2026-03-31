@@ -5,6 +5,7 @@ import { HomePage } from '@/pages/HomePage'
 import { LandingPage } from '@/pages/LandingPage'
 import { MealDetailPage } from '@/pages/MealDetailPage'
 import { MealsPage } from '@/pages/MealsPage'
+import { OnboardingPage } from '@/pages/OnboardingPage'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { ProgressPage } from '@/pages/ProgressPage'
 import { VoicePage } from '@/pages/VoicePage'
@@ -17,6 +18,7 @@ export default function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/home" element={<HomePage />} />
             <Route path="/voice" element={<VoicePage />} />
             <Route path="/progress" element={<ProgressPage />} />

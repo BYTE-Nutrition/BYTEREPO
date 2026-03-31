@@ -3,12 +3,9 @@ import { cn } from '@/components/ui/utils'
 
 type ByteLogoProps = {
   className?: string
-  /** Larger mark in headers */
-  size?: 'sm' | 'md'
 }
 
-export function ByteLogo({ className, size = 'md' }: ByteLogoProps) {
-  const h = size === 'sm' ? 'h-6' : 'h-7'
+export function ByteLogo({ className }: ByteLogoProps) {
   return (
     <span
       className={cn(
@@ -18,7 +15,12 @@ export function ByteLogo({ className, size = 'md' }: ByteLogoProps) {
       role="img"
       aria-label="Byte"
     >
-      <img src={logo} alt="" className={cn('w-auto max-w-[5.25rem] object-contain object-center', h)} decoding="async" />
+      <img
+        src={logo}
+        alt=""
+        className="h-7 w-auto max-w-[5.25rem] object-contain object-center"
+        decoding="async"
+      />
     </span>
   )
 }

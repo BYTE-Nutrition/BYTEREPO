@@ -40,7 +40,24 @@ export interface Goals {
   fatGoal: number
 }
 
+export type UserGoal =
+  | 'weight_loss'
+  | 'weight_gain'
+  | 'muscle_gain'
+  | 'maintenance'
+  | 'cooking'
+  | 'general_health'
+
+export interface UserProfile {
+  name: string
+  age: number
+  goal: UserGoal
+}
+
 export interface AppState {
+  /** False until user finishes name / age / goal flow */
+  onboardingComplete: boolean
+  profile: UserProfile
   planStartDate: string
   goals: Goals
   days: Record<string, DayData>
