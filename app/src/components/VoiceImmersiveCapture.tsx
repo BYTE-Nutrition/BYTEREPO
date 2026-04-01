@@ -9,6 +9,7 @@ type Props = {
   speechSupported: boolean
   onToggleMic: () => void
   liveItems: MealItem[]
+  cookingTips: string[]
   audioLevel: number
   micVizError: string | null
   onClose: () => void
@@ -25,6 +26,7 @@ export function VoiceImmersiveCapture({
   speechSupported,
   onToggleMic,
   liveItems,
+  cookingTips,
   audioLevel,
   micVizError,
   onClose,
@@ -129,30 +131,52 @@ export function VoiceImmersiveCapture({
           </div>
         </div>
 
-        <div
-          className="mt-auto max-h-[38vh] overflow-hidden rounded-2xl bg-black/35 ring-1 ring-white/10 transition-transform duration-300 ease-out"
-          style={{
-            transform: liveItems.length > 0 ? 'translateY(0)' : 'translateY(4px)',
-          }}
-        >
-          <div className="border-b border-white/10 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Ingredients</p>
+        <div className="mt-auto flex min-h-0 max-h-[46vh] flex-col gap-2">
+          <div
+            className="min-h-0 flex-1 overflow-hidden rounded-2xl bg-black/35 ring-1 ring-white/10 transition-transform duration-300 ease-out"
+            style={{
+              transform: liveItems.length > 0 ? 'translateY(0)' : 'translateY(4px)',
+            }}
+          >
+            <div className="border-b border-white/10 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Ingredients</p>
+            </div>
+            <ul className="max-h-[min(22vh,180px)] space-y-0 overflow-y-auto overscroll-contain px-2 py-2">
+              {liveItems.length === 0 ? (
+                <li className="px-3 py-5 text-center text-sm text-white/35">Parsed items show up here</li>
+              ) : (
+                liveItems.map((item, index) => (
+                  <li
+                    key={`${item.name}-${index}`}
+                    className="border-b border-white/[0.06] px-3 py-2.5 text-[15px] text-white/90 transition-opacity duration-300 last:border-0"
+                  >
+                    <span className="font-medium">{item.name}</span>
+                    <span className="text-white/45"> — {item.calories} cal</span>
+                  </li>
+                ))
+              )}
+            </ul>
           </div>
-          <ul className="max-h-[min(28vh,220px)] space-y-0 overflow-y-auto overscroll-contain px-2 py-2">
-            {liveItems.length === 0 ? (
-              <li className="px-3 py-6 text-center text-sm text-white/35">Parsed items show up here</li>
-            ) : (
-              liveItems.map((item, index) => (
-                <li
-                  key={`${item.name}-${index}`}
-                  className="border-b border-white/[0.06] px-3 py-3 text-[15px] text-white/90 transition-opacity duration-300 last:border-0"
-                >
-                  <span className="font-medium">{item.name}</span>
-                  <span className="text-white/45"> — {item.calories} cal</span>
+
+          <div
+            className="shrink-0 rounded-2xl bg-amber-500/[0.08] ring-1 ring-amber-400/20"
+            aria-live="polite"
+            aria-label="Cooking tips"
+          >
+            <div className="border-b border-amber-400/15 px-4 py-2.5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-amber-200/80">While cooking</p>
+            </div>
+            <ul className="max-h-[min(18vh,140px)] space-y-2 overflow-y-auto overscroll-contain px-3 py-3">
+              {cookingTips.map((tip, i) => (
+                <li key={i} className="flex gap-2 text-[13px] leading-snug text-white/75">
+                  <span className="mt-0.5 shrink-0 font-semibold text-amber-300/90" aria-hidden>
+                    •
+                  </span>
+                  <span>{tip}</span>
                 </li>
-              ))
-            )}
-          </ul>
+              ))}
+            </ul>
+          </div>
         </div>
 
         {bottomError && <p className="mt-3 text-center text-sm text-red-400/90">{bottomError}</p>}

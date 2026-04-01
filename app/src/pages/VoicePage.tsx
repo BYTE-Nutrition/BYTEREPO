@@ -6,6 +6,7 @@ import { VoiceImmersiveCapture } from '@/components/VoiceImmersiveCapture'
 import { useByte } from '@/context/useByte'
 import { useMicLevel } from '@/hooks/useMicLevel'
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
+import { getCookingTips } from '@/lib/cookingTips'
 import { parseMealWithApi, parseMealTranscriptBestEffort } from '@/lib/mealParseApi'
 import { QUICK_SUGGESTIONS, parseMealFromTranscript, sumMealItems } from '@/lib/nutrition'
 import { MEAL_LABELS, MEAL_ORDER, type MealItem, type MealSlot } from '@/lib/types'
@@ -152,6 +153,11 @@ export function VoicePage() {
     setError(null)
   }, [committedTranscript, speech])
 
+  const cookingTips = useMemo(
+    () => getCookingTips(liveItems, transcriptForDisplay),
+    [liveItems, transcriptForDisplay],
+  )
+
   return (
     <div className="bg-gradient-to-b from-gray-50/80 to-white">
       {showImmersive && (
@@ -166,6 +172,7 @@ export function VoicePage() {
             speech.toggle()
           }}
           liveItems={liveItems}
+          cookingTips={cookingTips}
           audioLevel={micLevel}
           micVizError={micVizError}
           onClose={exitImmersive}
