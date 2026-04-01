@@ -1,27 +1,26 @@
+import { ByteLogoMark } from './ByteLogoMark'
+
 export function Navbar() {
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-black/30 border-b border-white/10">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-neutral-950/80 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-            <span className="text-white font-bold">B</span>
-          </div>
-          <span className="text-xl font-semibold text-white">Byte</span>
-        </div>
+        <a href="#" className="flex items-center py-1 transition-opacity hover:opacity-90">
+          <ByteLogoMark />
+        </a>
 
         <div className="hidden md:flex items-center gap-8">
-          <a href="#features" className="text-gray-300 hover:text-white transition-colors">
+          <a href="#features" className="text-stone-300 hover:text-white transition-colors">
             Features
           </a>
-          <a href="#how-it-works" className="text-gray-300 hover:text-white transition-colors">
+          <a href="#how-it-works" className="text-stone-300 hover:text-white transition-colors">
             How It Works
           </a>
-          <a href="#pricing" className="text-gray-300 hover:text-white transition-colors">
+          <a href="#pricing" className="text-stone-300 hover:text-white transition-colors">
             Pricing
           </a>
         </div>
 
-        <button className="px-5 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white transition-all hover:shadow-lg hover:shadow-blue-500/50">
+        <button className="rounded-xl bg-neutral-950 px-5 py-2.5 text-white shadow-lg shadow-black/25 ring-1 ring-white/10 transition-all hover:bg-black hover:shadow-black/40">
           Download
         </button>
       </div>

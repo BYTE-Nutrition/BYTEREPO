@@ -24,12 +24,14 @@ export function PhoneMockup({
       }}
     >
       {/* Phone frame */}
-      <div className={`relative w-[280px] h-[570px] bg-gradient-to-br from-gray-800 to-gray-900 rounded-[3rem] p-3 shadow-2xl ${glow ? 'shadow-blue-500/20' : ''}`}>
+      <div
+        className={`relative h-[570px] w-[280px] rounded-[3rem] bg-gradient-to-br from-neutral-800 to-neutral-950 p-3 shadow-2xl ${glow ? 'shadow-blue-950/40' : ''}`}
+      >
         {/* Notch */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-black rounded-b-3xl z-10"></div>
 
         {/* Screen */}
-        <div className="w-full h-full bg-gradient-to-b from-gray-900 to-black rounded-[2.5rem] overflow-hidden relative">
+        <div className="relative h-full w-full overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-neutral-900 to-black">
           {screenContent || (
             <div className="w-full h-full flex items-center justify-center">
               <ImageWithFallback
@@ -47,7 +49,7 @@ export function PhoneMockup({
       </div>
 
       {glow && (
-        <div className="absolute inset-0 bg-blue-500/20 blur-3xl -z-10 scale-110"></div>
+        <div className="absolute inset-0 -z-10 scale-110 bg-blue-600/12 blur-3xl"></div>
       )}
     </div>
   );

@@ -5,24 +5,24 @@ interface AppScreenProps {
 export function AppScreen({ type }: AppScreenProps) {
   if (type === 'dashboard') {
     return (
-      <div className="w-full h-full bg-gradient-to-b from-gray-950 to-black p-6 flex flex-col">
+      <div className="flex h-full w-full flex-col bg-gradient-to-b from-neutral-950 to-black p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="text-gray-400">Today</div>
-          <div className="w-8 h-8 rounded-full bg-blue-500"></div>
+        <div className="mb-8 flex items-center justify-between">
+          <div className="text-stone-400">Today</div>
+          <div className="h-8 w-8 rounded-full bg-blue-600 ring-2 ring-blue-400/25"></div>
         </div>
 
         {/* Calories remaining */}
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="relative w-48 h-48 mb-6">
-            <svg className="w-full h-full transform -rotate-90">
-              <circle cx="96" cy="96" r="88" fill="none" stroke="rgba(59, 130, 246, 0.1)" strokeWidth="12" />
+        <div className="flex flex-1 flex-col items-center justify-center">
+          <div className="relative mb-6 h-48 w-48">
+            <svg className="h-full w-full -rotate-90 transform">
+              <circle cx="96" cy="96" r="88" fill="none" stroke="rgba(96, 165, 250, 0.14)" strokeWidth="12" />
               <circle
                 cx="96"
                 cy="96"
                 r="88"
                 fill="none"
-                stroke="rgb(59, 130, 246)"
+                stroke="rgb(96, 165, 250)"
                 strokeWidth="12"
                 strokeDasharray="553"
                 strokeDashoffset="138"
@@ -31,33 +31,33 @@ export function AppScreen({ type }: AppScreenProps) {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <div className="text-5xl text-white">1,247</div>
-              <div className="text-gray-400 text-sm">remaining</div>
+              <div className="text-sm text-stone-400">remaining</div>
             </div>
           </div>
 
-          {/* Macros */}
-          <div className="grid grid-cols-3 gap-6 w-full">
+          {/* Macros — cool blue family */}
+          <div className="grid w-full grid-cols-3 gap-6">
             <div className="text-center">
-              <div className="text-blue-400 text-2xl">45g</div>
-              <div className="text-gray-500 text-xs">Protein</div>
+              <div className="text-2xl text-sky-300">45g</div>
+              <div className="text-xs text-stone-500">Protein</div>
             </div>
             <div className="text-center">
-              <div className="text-indigo-400 text-2xl">120g</div>
-              <div className="text-gray-500 text-xs">Carbs</div>
+              <div className="text-2xl text-blue-300">120g</div>
+              <div className="text-xs text-stone-500">Carbs</div>
             </div>
             <div className="text-center">
-              <div className="text-purple-400 text-2xl">38g</div>
-              <div className="text-gray-500 text-xs">Fat</div>
+              <div className="text-2xl text-indigo-300">38g</div>
+              <div className="text-xs text-stone-500">Fat</div>
             </div>
           </div>
         </div>
 
         {/* Bottom nav indicator */}
-        <div className="flex justify-center gap-2 mt-8">
-          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-          <div className="w-2 h-2 rounded-full bg-white/20"></div>
-          <div className="w-2 h-2 rounded-full bg-white/20"></div>
-          <div className="w-2 h-2 rounded-full bg-white/20"></div>
+        <div className="mt-8 flex justify-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-blue-400"></div>
+          <div className="h-2 w-2 rounded-full bg-white/20"></div>
+          <div className="h-2 w-2 rounded-full bg-white/20"></div>
+          <div className="h-2 w-2 rounded-full bg-white/20"></div>
         </div>
       </div>
     );
@@ -65,46 +65,46 @@ export function AppScreen({ type }: AppScreenProps) {
 
   if (type === 'meals') {
     return (
-      <div className="w-full h-full bg-gradient-to-b from-gray-950 to-black p-6">
-        <h2 className="text-white text-2xl mb-6">Today's Meals</h2>
+      <div className="h-full w-full bg-gradient-to-b from-neutral-950 to-black p-6">
+        <h2 className="mb-6 text-2xl text-white">Today's Meals</h2>
 
         <div className="space-y-4">
           {/* Breakfast */}
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-            <div className="flex justify-between items-start mb-2">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="mb-2 flex items-start justify-between">
               <div>
                 <div className="text-white">Breakfast</div>
-                <div className="text-gray-400 text-sm">Oatmeal & Berries</div>
+                <div className="text-sm text-stone-400">Oatmeal & Berries</div>
               </div>
-              <div className="text-blue-400">350 cal</div>
+              <div className="text-blue-300">350 cal</div>
             </div>
           </div>
 
           {/* Lunch */}
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-            <div className="flex justify-between items-start mb-2">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="mb-2 flex items-start justify-between">
               <div>
                 <div className="text-white">Lunch</div>
-                <div className="text-gray-400 text-sm">Chicken Salad</div>
+                <div className="text-sm text-stone-400">Chicken Salad</div>
               </div>
-              <div className="text-blue-400">520 cal</div>
+              <div className="text-blue-300">520 cal</div>
             </div>
           </div>
 
           {/* Snack */}
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-            <div className="flex justify-between items-start mb-2">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="mb-2 flex items-start justify-between">
               <div>
                 <div className="text-white">Snack</div>
-                <div className="text-gray-400 text-sm">Protein Bar</div>
+                <div className="text-sm text-stone-400">Protein Bar</div>
               </div>
-              <div className="text-blue-400">180 cal</div>
+              <div className="text-blue-300">180 cal</div>
             </div>
           </div>
         </div>
 
         {/* Add meal button */}
-        <button className="w-full mt-6 py-4 rounded-2xl bg-blue-500 text-white">
+        <button className="mt-6 w-full rounded-2xl bg-neutral-950 py-4 text-white shadow-lg shadow-black/30 ring-1 ring-white/10">
           + Add Meal
         </button>
       </div>
@@ -113,18 +113,18 @@ export function AppScreen({ type }: AppScreenProps) {
 
   if (type === 'progress') {
     return (
-      <div className="w-full h-full bg-gradient-to-b from-gray-950 to-black p-6">
-        <h2 className="text-white text-2xl mb-6">Weekly Progress</h2>
+      <div className="h-full w-full bg-gradient-to-b from-neutral-950 to-black p-6">
+        <h2 className="mb-6 text-2xl text-white">Weekly Progress</h2>
 
         {/* Chart bars */}
-        <div className="flex items-end justify-between h-48 mb-8">
+        <div className="mb-8 flex h-48 items-end justify-between">
           {[65, 80, 70, 90, 75, 85, 60].map((height, i) => (
             <div key={i} className="flex flex-col items-center gap-2">
               <div
-                className="w-8 rounded-t-lg bg-gradient-to-t from-blue-500 to-indigo-600"
+                className="w-8 rounded-t-lg bg-gradient-to-t from-blue-900 to-blue-500"
                 style={{ height: `${height}%` }}
               ></div>
-              <div className="text-gray-500 text-xs">
+              <div className="text-xs text-stone-500">
                 {['M', 'T', 'W', 'T', 'F', 'S', 'S'][i]}
               </div>
             </div>
@@ -133,14 +133,14 @@ export function AppScreen({ type }: AppScreenProps) {
 
         {/* Stats */}
         <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-            <div className="text-gray-400 text-sm mb-1">Avg Daily Calories</div>
-            <div className="text-white text-2xl">1,850</div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="mb-1 text-sm text-stone-400">Avg Daily Calories</div>
+            <div className="text-2xl text-white">1,850</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-            <div className="text-gray-400 text-sm mb-1">Days on Track</div>
-            <div className="text-white text-2xl">6 of 7</div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="mb-1 text-sm text-stone-400">Days on Track</div>
+            <div className="text-2xl text-white">6 of 7</div>
           </div>
         </div>
       </div>
@@ -149,27 +149,27 @@ export function AppScreen({ type }: AppScreenProps) {
 
   // goals
   return (
-    <div className="w-full h-full bg-gradient-to-b from-gray-950 to-black p-6">
-      <h2 className="text-white text-2xl mb-6">Your Goals</h2>
+    <div className="h-full w-full bg-gradient-to-b from-neutral-950 to-black p-6">
+      <h2 className="mb-6 text-2xl text-white">Your Goals</h2>
 
       <div className="space-y-4">
-        <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-          <div className="text-gray-400 text-sm mb-2">Daily Calorie Target</div>
-          <div className="text-white text-3xl">2,100</div>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="mb-2 text-sm text-stone-400">Daily Calorie Target</div>
+          <div className="text-3xl text-white">2,100</div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-          <div className="text-gray-400 text-sm mb-2">Protein Goal</div>
-          <div className="text-white text-3xl">150g</div>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="mb-2 text-sm text-stone-400">Protein Goal</div>
+          <div className="text-3xl text-white">150g</div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-          <div className="text-gray-400 text-sm mb-2">Weight Goal</div>
-          <div className="text-white text-3xl">165 lbs</div>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="mb-2 text-sm text-stone-400">Weight Goal</div>
+          <div className="text-3xl text-white">165 lbs</div>
         </div>
       </div>
 
-      <button className="w-full mt-8 py-4 rounded-2xl border border-blue-500 text-blue-500">
+      <button className="mt-8 w-full rounded-2xl border border-blue-500/45 py-4 text-blue-200 transition-colors hover:border-blue-400 hover:bg-blue-500/10">
         Edit Goals
       </button>
     </div>

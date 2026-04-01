@@ -6,17 +6,17 @@ interface FeatureCardProps {
 
 export function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (
-    <div className="group relative p-8 rounded-3xl bg-gradient-to-b from-white/5 to-white/0 border border-white/10 hover:border-blue-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10">
+    <div className="group relative rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-white/0 p-8 transition-all duration-300 hover:border-blue-500/35 hover:shadow-xl hover:shadow-blue-950/25">
       {/* Glow effect on hover */}
-      <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-blue-500/0 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+      <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-blue-500/0 to-blue-600/8 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
 
       <div className="relative z-10">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-600/20 border border-blue-500/30 flex items-center justify-center mb-4">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-600/30 bg-gradient-to-br from-blue-950/50 to-indigo-950/40">
           {icon}
         </div>
 
-        <h3 className="text-xl text-white mb-2">{title}</h3>
-        <p className="text-gray-400 leading-relaxed">{description}</p>
+        <h3 className="mb-2 text-xl text-white">{title}</h3>
+        <p className="leading-relaxed text-stone-400">{description}</p>
       </div>
     </div>
   );
