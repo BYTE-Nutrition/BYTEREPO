@@ -2,10 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Mic, Pencil, Plus, X } from 'lucide-react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ByteLogo } from '@/components/ByteLogo'
+import { VoiceImmersiveCapture } from '@/components/VoiceImmersiveCapture'
 import { useByte } from '@/context/useByte'
+import { useMicLevel } from '@/hooks/useMicLevel'
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
+import { parseMealWithApi, parseMealTranscriptBestEffort } from '@/lib/mealParseApi'
 import { QUICK_SUGGESTIONS, parseMealFromTranscript, sumMealItems } from '@/lib/nutrition'
-import { MEAL_LABELS, MEAL_ORDER, type MealSlot } from '@/lib/types'
+import { MEAL_LABELS, MEAL_ORDER, type MealItem, type MealSlot } from '@/lib/types'
 
 function parseSlot(s: string | null): MealSlot {
   if (s && MEAL_ORDER.includes(s as MealSlot)) return s as MealSlot
@@ -16,6 +19,7 @@ export function VoicePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const prefillApplied = useRef(false)
+  const liveParseSeq = useRef(0)
   const [params] = useSearchParams()
   const initialSlot = useMemo(() => parseSlot(params.get('slot')), [params])
   const [slot, setSlot] = useState<MealSlot>(initialSlot)
@@ -28,12 +32,29 @@ export function VoicePage() {
     null,
   )
   const [committedTranscript, setCommittedTranscript] = useState('')
+  const [liveItems, setLiveItems] = useState<MealItem[]>([])
+
+  const wantsImmersive =
+    params.get('capture') === '1' ||
+    (location.state as { immersive?: boolean } | null)?.immersive === true
+  const showImmersive = wantsImmersive && step === 'listen'
 
   const { logMeal } = useByte()
 
   const speech = useSpeechRecognition({
     onError: (msg) => setError(msg),
   })
+
+  const { level: micLevel, error: micVizError } = useMicLevel(speech.listening && showImmersive)
+
+  useEffect(() => {
+    if (!showImmersive) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [showImmersive])
 
   useEffect(() => {
     if (prefillApplied.current) return
@@ -47,7 +68,40 @@ export function VoicePage() {
 
   const transcriptForDisplay = speech.displayTranscript || speech.finalText
 
-  const handleAnalyze = useCallback(() => {
+  const exitImmersive = useCallback(() => {
+    const next = new URLSearchParams(params)
+    next.delete('capture')
+    const qs = next.toString()
+    navigate({ pathname: location.pathname, search: qs ? `?${qs}` : '' }, { replace: true, state: null })
+  }, [location.pathname, navigate, params])
+
+  useEffect(() => {
+    if (!showImmersive || step !== 'listen') {
+      setLiveItems([])
+      return
+    }
+    const text = transcriptForDisplay.trim()
+    if (!text) {
+      setLiveItems([])
+      return
+    }
+    const seq = ++liveParseSeq.current
+    const timer = window.setTimeout(async () => {
+      const items = await parseMealTranscriptBestEffort(text)
+      if (liveParseSeq.current !== seq) return
+      setLiveItems(
+        items.map((it, i) => ({
+          ...it,
+          id: it.id || `live-${i}-${it.name}`,
+        })),
+      )
+    }, 500)
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [showImmersive, step, transcriptForDisplay])
+
+  const handleAnalyze = useCallback(async () => {
     const text = transcriptForDisplay.trim()
     if (!text) {
       setError('Add a description or use the microphone first.')
@@ -55,11 +109,14 @@ export function VoicePage() {
     }
     setError(null)
     setCommittedTranscript(text)
-    const items = parseMealFromTranscript(text)
+    speech.stop()
+    if (wantsImmersive) exitImmersive()
+    const apiItems = await parseMealWithApi(text)
+    const items =
+      apiItems && apiItems.length > 0 ? apiItems : parseMealFromTranscript(text)
     setPreviewItems(items)
     setStep('confirm')
-    speech.stop()
-  }, [speech, transcriptForDisplay])
+  }, [exitImmersive, speech, transcriptForDisplay, wantsImmersive])
 
   const handleConfirmLog = useCallback(() => {
     if (!previewItems?.length) return
@@ -97,6 +154,27 @@ export function VoicePage() {
 
   return (
     <div className="bg-gradient-to-b from-gray-50/80 to-white">
+      {showImmersive && (
+        <VoiceImmersiveCapture
+          slot={slot}
+          onSlotChange={setSlot}
+          transcript={transcriptForDisplay}
+          listening={speech.listening}
+          speechSupported={speech.supported}
+          onToggleMic={() => {
+            setError(null)
+            speech.toggle()
+          }}
+          liveItems={liveItems}
+          audioLevel={micLevel}
+          micVizError={micVizError}
+          onClose={exitImmersive}
+          onReview={() => void handleAnalyze()}
+          onUseKeyboard={exitImmersive}
+          bottomError={error}
+        />
+      )}
+
       <header className="border-b border-white/10 bg-neutral-950 px-6 pb-8 pt-14 text-white">
         <div className="relative mb-8 flex items-center justify-between">
           <button

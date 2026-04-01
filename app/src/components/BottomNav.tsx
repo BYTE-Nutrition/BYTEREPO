@@ -30,7 +30,7 @@ export function BottomNav() {
           <button
             type="button"
             aria-label="Log meal with voice"
-            onClick={() => navigate('/voice')}
+            onClick={() => navigate('/voice?capture=1')}
             className="absolute -top-[1.65rem] flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-neutral-950 shadow-[0_14px_32px_-8px_rgba(0,0,0,0.5)] ring-[6px] ring-stone-100 transition-transform active:scale-95"
           >
             <Mic className="h-9 w-9 text-amber-200" strokeWidth={2} />
