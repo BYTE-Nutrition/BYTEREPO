@@ -61,15 +61,22 @@ export function ByteProvider({ children }: { children: ReactNode }) {
   const updateProfile = useCallback((p: Partial<UserProfile>) => {
     setState((s) => {
       const profile = { ...s.profile, ...p }
-      const recalc = 'age' in p || 'goal' in p
-      const goals = recalc ? computeGoalsFromProfile(profile.age, profile.goal) : s.goals
+      const recalc =
+        'age' in p ||
+        'goal' in p ||
+        'heightCm' in p ||
+        'weightKg' in p ||
+        'sex' in p ||
+        'cooksPerWeek' in p ||
+        'goalPace' in p
+      const goals = recalc ? computeGoalsFromProfile(profile) : s.goals
       return { ...s, profile, goals }
     })
   }, [])
 
   const completeOnboarding = useCallback((profile: UserProfile) => {
     const t = todayKey()
-    const goals = computeGoalsFromProfile(profile.age, profile.goal)
+    const goals = computeGoalsFromProfile(profile)
     setState({
       onboardingComplete: true,
       profile,

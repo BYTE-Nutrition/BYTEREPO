@@ -5,6 +5,7 @@ import { AppScreenHeader } from '@/components/AppScreenHeader'
 import { VoiceImmersiveCapture } from '@/components/VoiceImmersiveCapture'
 import { useByte } from '@/context/useByte'
 import { useMicLevel } from '@/hooks/useMicLevel'
+import { useOpenAiRealtimeVoice } from '@/hooks/useOpenAiRealtimeVoice'
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
 import { getCookingTips } from '@/lib/cookingTips'
 import { parseMealWithApi, parseMealTranscriptBestEffort } from '@/lib/mealParseApi'
@@ -42,11 +43,51 @@ export function VoicePage() {
 
   const { logMeal } = useByte()
 
+  const realtimeSessionUrl = import.meta.env.VITE_REALTIME_SESSION_URL
+  const realtimeConfigured = Boolean(realtimeSessionUrl?.trim())
+  const realtimeAudioRef = useRef<HTMLAudioElement>(null)
+  const [fallbackSpeech, setFallbackSpeech] = useState(false)
+
   const speech = useSpeechRecognition({
     onError: (msg) => setError(msg),
   })
 
-  const { level: micLevel, error: micVizError } = useMicLevel(speech.listening && showImmersive)
+  const realtime = useOpenAiRealtimeVoice({
+    sessionUrl: realtimeSessionUrl,
+    audioRef: realtimeAudioRef,
+    onError: (msg) => {
+      setError(msg)
+      setFallbackSpeech(true)
+    },
+  })
+
+  useEffect(() => {
+    if (showImmersive && realtimeConfigured) {
+      setFallbackSpeech(false)
+    }
+  }, [showImmersive, realtimeConfigured])
+
+  useEffect(() => {
+    if (showImmersive) return
+    const st = realtime.status
+    if (st !== 'live' && st !== 'connecting') return
+    if (st === 'live') {
+      speech.setTranscriptManual(realtime.userTranscript)
+    }
+    realtime.disconnect()
+  }, [showImmersive, realtime.disconnect, realtime.status, realtime.userTranscript, speech])
+
+  const immersiveRealtimeOn =
+    showImmersive && realtimeConfigured && !fallbackSpeech
+
+  const immersiveListening = immersiveRealtimeOn
+    ? realtime.status === 'live' || realtime.status === 'connecting'
+    : speech.listening
+
+  const { level: micLevel, error: micVizError } = useMicLevel(
+    immersiveListening,
+    immersiveRealtimeOn && realtime.status === 'live' ? realtime.localStream : null,
+  )
 
   useEffect(() => {
     if (!showImmersive) return
@@ -67,14 +108,57 @@ export function VoicePage() {
     navigate({ pathname: location.pathname, search: location.search, hash: location.hash }, { replace: true, state: null })
   }, [location.hash, location.pathname, location.search, location.state, navigate, speech])
 
-  const transcriptForDisplay = speech.displayTranscript || speech.finalText
+  const transcriptForDisplay =
+    immersiveRealtimeOn && realtime.status === 'live'
+      ? realtime.userTranscript
+      : speech.displayTranscript || speech.finalText
+
+  const immersiveStatusLine = useMemo(() => {
+    if (!immersiveRealtimeOn) return undefined
+    if (realtime.status === 'connecting') return 'Connecting…'
+    if (realtime.status === 'error') return 'Live coach unavailable — tap to try again or use the keyboard'
+    if (realtime.status === 'live') {
+      return realtime.assistantSpeaking ? 'Byte is speaking…' : 'Listening…'
+    }
+    return 'Tap for live coach'
+  }, [immersiveRealtimeOn, realtime.assistantSpeaking, realtime.status])
+
+  const immersiveSpeechSupported = speech.supported || immersiveRealtimeOn
+
+  const toggleImmersiveMic = useCallback(() => {
+    setError(null)
+    if (immersiveRealtimeOn) {
+      if (realtime.status === 'connecting') {
+        const t = realtime.userTranscript
+        realtime.disconnect()
+        speech.setTranscriptManual(t)
+        return
+      }
+      if (realtime.status === 'live') {
+        const t = realtime.userTranscript
+        realtime.disconnect()
+        speech.setTranscriptManual(t)
+        return
+      }
+      speech.setTranscriptManual('')
+      void realtime.connect()
+      return
+    }
+    speech.toggle()
+  }, [immersiveRealtimeOn, realtime, speech])
 
   const exitImmersive = useCallback(() => {
+    if (immersiveRealtimeOn && (realtime.status === 'live' || realtime.status === 'connecting')) {
+      if (realtime.status === 'live') {
+        speech.setTranscriptManual(realtime.userTranscript)
+      }
+      realtime.disconnect()
+    }
     const next = new URLSearchParams(params)
     next.delete('capture')
     const qs = next.toString()
     navigate({ pathname: location.pathname, search: qs ? `?${qs}` : '' }, { replace: true, state: null })
-  }, [location.pathname, navigate, params])
+  }, [immersiveRealtimeOn, location.pathname, navigate, params, realtime, speech])
 
   useEffect(() => {
     if (!showImmersive || step !== 'listen') {
@@ -111,13 +195,18 @@ export function VoicePage() {
     setError(null)
     setCommittedTranscript(text)
     speech.stop()
+    if (immersiveRealtimeOn && realtime.status !== 'idle' && realtime.status !== 'error') {
+      const t = realtime.userTranscript
+      realtime.disconnect()
+      speech.setTranscriptManual(t.trim() || text)
+    }
     if (wantsImmersive) exitImmersive()
     const apiItems = await parseMealWithApi(text)
     const items =
       apiItems && apiItems.length > 0 ? apiItems : parseMealFromTranscript(text)
     setPreviewItems(items)
     setStep('confirm')
-  }, [exitImmersive, speech, transcriptForDisplay, wantsImmersive])
+  }, [exitImmersive, immersiveRealtimeOn, realtime, speech, transcriptForDisplay, wantsImmersive])
 
   const handleConfirmLog = useCallback(() => {
     if (!previewItems?.length) return
@@ -160,17 +249,16 @@ export function VoicePage() {
 
   return (
     <div className="min-h-full bg-[#f7f6f3] text-stone-800">
+      <audio ref={realtimeAudioRef} className="hidden" playsInline aria-hidden />
       {showImmersive && (
         <VoiceImmersiveCapture
           slot={slot}
           onSlotChange={setSlot}
           transcript={transcriptForDisplay}
-          listening={speech.listening}
-          speechSupported={speech.supported}
-          onToggleMic={() => {
-            setError(null)
-            speech.toggle()
-          }}
+          listening={immersiveListening}
+          speechSupported={immersiveSpeechSupported}
+          statusLine={immersiveStatusLine}
+          onToggleMic={toggleImmersiveMic}
           liveItems={liveItems}
           cookingTips={cookingTips}
           audioLevel={micLevel}

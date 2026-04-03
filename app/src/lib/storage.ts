@@ -1,4 +1,14 @@
-import type { AppState, DayData, MealItem, MealLog, MealSlot, UserGoal, UserProfile } from './types'
+import type {
+  AppState,
+  DayData,
+  GoalPace,
+  MealItem,
+  MealLog,
+  MealSlot,
+  UserGoal,
+  UserProfile,
+  UserSex,
+} from './types'
 import { MEAL_ORDER } from './types'
 import { totalsFromMealItems } from './aggregate'
 import { computeGoalsFromProfile } from './goalsFromProfile'
@@ -19,14 +29,29 @@ function normalizeGoal(g: unknown): UserGoal {
   return typeof g === 'string' && USER_GOALS.includes(g as UserGoal) ? (g as UserGoal) : 'maintenance'
 }
 
+const USER_SEX: UserSex[] = ['male', 'female', 'prefer_not_say']
+function normalizeSex(s: unknown): UserSex {
+  return typeof s === 'string' && USER_SEX.includes(s as UserSex) ? (s as UserSex) : 'prefer_not_say'
+}
+
+const GOAL_PACES: GoalPace[] = ['gradual', 'steady', 'ambitious']
+function normalizePace(p: unknown): GoalPace {
+  return typeof p === 'string' && GOAL_PACES.includes(p as GoalPace) ? (p as GoalPace) : 'steady'
+}
+
 const defaultProfile: UserProfile = {
   name: '',
   age: 30,
+  sex: 'prefer_not_say',
+  heightCm: 170,
+  weightKg: 72,
+  cooksPerWeek: 4,
   goal: 'maintenance',
+  goalPace: 'steady',
 }
 
 function defaultGoalsFromProfile(p: UserProfile) {
-  return computeGoalsFromProfile(p.age, p.goal)
+  return computeGoalsFromProfile(p)
 }
 
 export function emptyDay(): DayData {
@@ -167,7 +192,12 @@ export function createInitialState(): AppState {
   const profile: UserProfile = {
     name: 'Alex',
     age: 28,
+    sex: 'female',
+    heightCm: 168,
+    weightKg: 62,
+    cooksPerWeek: 5,
     goal: 'maintenance',
+    goalPace: 'steady',
   }
 
   return {
@@ -189,10 +219,21 @@ function migrateParsed(parsed: AppState): AppState {
   if (!next.profile || typeof next.profile.name !== 'string') {
     next.profile = { ...defaultProfile }
   } else {
+    const p = next.profile as Partial<UserProfile> & { name?: string }
     next.profile = {
-      name: next.profile.name,
-      age: typeof next.profile.age === 'number' && next.profile.age >= 13 ? next.profile.age : 30,
-      goal: normalizeGoal(next.profile.goal),
+      name: typeof p.name === 'string' ? p.name : '',
+      age: typeof p.age === 'number' && p.age >= 13 ? p.age : 30,
+      sex: normalizeSex(p.sex),
+      heightCm:
+        typeof p.heightCm === 'number' && p.heightCm >= 120 && p.heightCm <= 220 ? p.heightCm : 170,
+      weightKg:
+        typeof p.weightKg === 'number' && p.weightKg >= 30 && p.weightKg <= 250 ? p.weightKg : 72,
+      cooksPerWeek:
+        typeof p.cooksPerWeek === 'number' && p.cooksPerWeek >= 0 && p.cooksPerWeek <= 21
+          ? Math.round(p.cooksPerWeek)
+          : 4,
+      goal: normalizeGoal(p.goal),
+      goalPace: normalizePace(p.goalPace),
     }
   }
   return next

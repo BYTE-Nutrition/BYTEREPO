@@ -48,14 +48,28 @@ export type UserGoal =
   | 'cooking'
   | 'general_health'
 
+/** Used for Mifflin–St Jeor BMR. */
+export type UserSex = 'male' | 'female' | 'prefer_not_say'
+
+/** How quickly you want to move toward your health goal (affects calorie adjustment). */
+export type GoalPace = 'gradual' | 'steady' | 'ambitious'
+
 export interface UserProfile {
   name: string
   age: number
+  sex: UserSex
+  /** Centimeters */
+  heightCm: number
+  /** Kilograms */
+  weightKg: number
+  /** Home-cooked meals per week (engagement / activity proxy). */
+  cooksPerWeek: number
   goal: UserGoal
+  goalPace: GoalPace
 }
 
 export interface AppState {
-  /** False until user finishes name / age / goal flow */
+  /** False until user finishes onboarding (profile + targets) */
   onboardingComplete: boolean
   profile: UserProfile
   planStartDate: string
