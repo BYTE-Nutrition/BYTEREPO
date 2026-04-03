@@ -66,7 +66,7 @@ export function OnboardingPage() {
   }
 
   return (
-    <div className="flex min-h-svh flex-col bg-[#fafaf9]">
+    <div className="flex min-h-svh flex-col bg-[#f7f6f3]">
       <div className="flex flex-1 flex-col px-6 pt-14 pb-8">
         <div className="mb-10 flex items-center justify-center">
           <img
@@ -92,11 +92,11 @@ export function OnboardingPage() {
           {step === 0 && (
             <div>
               <p className="text-label mb-3 text-center text-stone-400">Welcome</p>
-              <h1 className="mb-4 text-center text-3xl font-semibold leading-tight tracking-tight text-stone-900">
+              <h1 className="mb-4 text-center text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
                 Let&apos;s personalize Byte for you
               </h1>
-              <p className="text-center text-base leading-relaxed text-stone-500">
-                A few quick questions—like a typeform. Then we&apos;ll set your calorie and protein targets.
+              <p className="text-center text-[15px] leading-relaxed text-stone-500">
+                A short conversation. Then we&apos;ll set gentle calorie and protein targets.
               </p>
             </div>
           )}
@@ -104,7 +104,7 @@ export function OnboardingPage() {
           {step === 1 && (
             <div>
               <p className="text-label mb-3 text-stone-400">Question 1 of 3</p>
-              <h1 className="mb-8 text-3xl font-semibold leading-tight tracking-tight text-stone-900">
+              <h1 className="mb-8 text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
                 What should we call you?
               </h1>
               <input
@@ -123,7 +123,7 @@ export function OnboardingPage() {
           {step === 2 && (
             <div>
               <p className="text-label mb-3 text-stone-400">Question 2 of 3</p>
-              <h1 className="mb-2 text-3xl font-semibold leading-tight tracking-tight text-stone-900">
+              <h1 className="mb-2 text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
                 How old are you?
               </h1>
               <p className="mb-6 text-sm text-stone-500">Scroll to select</p>
@@ -176,7 +176,7 @@ export function OnboardingPage() {
           {step === 3 && (
             <div>
               <p className="text-label mb-3 text-stone-400">Question 3 of 3</p>
-              <h1 className="mb-2 text-3xl font-semibold leading-tight tracking-tight text-stone-900">
+              <h1 className="mb-2 text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
                 What&apos;s your main goal?
               </h1>
               <p className="mb-6 text-sm text-stone-500">We&apos;ll tune calories and protein to match.</p>
@@ -188,8 +188,8 @@ export function OnboardingPage() {
                     onClick={() => setGoal(opt.id)}
                     className={`flex w-full items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all ${
                       goal === opt.id
-                        ? 'border-neutral-900 bg-neutral-900 text-white shadow-lg'
-                        : 'border-stone-200 bg-white text-stone-800 ring-1 ring-stone-100 hover:border-stone-300'
+                        ? 'border-stone-800 bg-stone-900 text-white shadow-sm'
+                        : 'border-stone-200/80 bg-white/80 text-stone-800 hover:border-stone-300/80'
                     }`}
                   >
                     <span
@@ -211,12 +211,14 @@ export function OnboardingPage() {
                 ))}
               </div>
 
-              <div className="mt-8 rounded-2xl bg-stone-100/90 p-4 ring-1 ring-stone-200/80">
-                <p className="text-label mb-2 text-stone-500">Your starting targets</p>
-                <p className="text-sm text-stone-600">
-                  <span className="font-semibold text-stone-900">{previewGoals.calorieGoal} cal</span> daily ·{' '}
-                  <span className="font-semibold text-stone-900">{previewGoals.proteinGoal}g protein</span>
-                  <span className="text-stone-500"> — adjust anytime in Profile.</span>
+              <div className="mt-8 rounded-2xl border border-stone-200/60 bg-white/50 p-4">
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">
+                  Starting targets
+                </p>
+                <p className="text-sm leading-relaxed text-stone-600">
+                  <span className="font-medium text-stone-900">{previewGoals.calorieGoal} kcal</span> daily ·{' '}
+                  <span className="font-medium text-stone-900">{previewGoals.proteinGoal}g protein</span>
+                  <span className="text-stone-500"> — tweak anytime in Profile.</span>
                 </p>
               </div>
             </div>
@@ -224,7 +226,7 @@ export function OnboardingPage() {
         </div>
       </div>
 
-      <div className="sticky bottom-0 border-t border-stone-200/80 bg-[#fafaf9]/95 px-6 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+      <div className="sticky bottom-0 border-t border-stone-200/80 bg-[#f7f6f3]/95 px-6 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] backdrop-blur-md">
         <div className="mx-auto flex max-w-sm gap-3">
           {step > 0 && (
             <button
@@ -240,7 +242,7 @@ export function OnboardingPage() {
               type="button"
               disabled={!canContinue()}
               onClick={next}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-neutral-950 py-4 text-sm font-semibold text-white shadow-lg transition-all disabled:cursor-not-allowed disabled:opacity-35"
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-stone-900 py-4 text-sm font-medium text-[#f5e6c8] shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-35"
             >
               Continue
               <ArrowRight className="h-4 w-4" strokeWidth={2} />
@@ -249,7 +251,7 @@ export function OnboardingPage() {
             <button
               type="button"
               onClick={finish}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-neutral-950 py-4 text-sm font-semibold text-white shadow-lg"
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-stone-900 py-4 text-sm font-medium text-[#f5e6c8] shadow-sm"
             >
               Start tracking
               <Check className="h-4 w-4" strokeWidth={2.5} />

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Mic, Pencil, Plus, X } from 'lucide-react'
+import { Mic, Pencil, Plus } from 'lucide-react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { ByteLogo } from '@/components/ByteLogo'
+import { AppScreenHeader } from '@/components/AppScreenHeader'
 import { VoiceImmersiveCapture } from '@/components/VoiceImmersiveCapture'
 import { useByte } from '@/context/useByte'
 import { useMicLevel } from '@/hooks/useMicLevel'
@@ -159,7 +159,7 @@ export function VoicePage() {
   )
 
   return (
-    <div className="bg-gradient-to-b from-gray-50/80 to-white">
+    <div className="min-h-full bg-[#f7f6f3] text-stone-800">
       {showImmersive && (
         <VoiceImmersiveCapture
           slot={slot}
@@ -182,34 +182,20 @@ export function VoicePage() {
         />
       )}
 
-      <header className="border-b border-white/10 bg-neutral-950 px-6 pb-8 pt-14 text-white">
-        <div className="relative mb-8 flex items-center justify-between">
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={() => navigate(-1)}
-            className="-ml-1 rounded-full p-2 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <X className="h-5 w-5" strokeWidth={1.75} />
-          </button>
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-            <ByteLogo />
-          </div>
-          <div className="w-9" aria-hidden />
-        </div>
+      <AppScreenHeader
+        onBack={() => navigate(-1)}
+        backIcon="close"
+        eyebrow="Voice"
+        title="Log this meal"
+        subtitle="Speak or type—Byte listens either way."
+      />
 
-        <div className="text-center">
-          <p className="text-label mb-2 text-white/45">Voice</p>
-          <h1 className="text-display-title text-white">Voice Meal Logging</h1>
-        </div>
-      </header>
-
-      <div className="px-6 pb-6 pt-10">
-        <label className="text-label mb-2 block text-gray-400">Meal</label>
+      <div className="px-6 pb-6 pt-4">
+        <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Slot</label>
         <select
           value={slot}
           onChange={(e) => setSlot(e.target.value as MealSlot)}
-          className="mb-10 w-full rounded-xl border-0 bg-white px-4 py-3.5 text-[15px] text-gray-900 shadow-sm ring-1 ring-black/[0.06] focus:outline-none focus:ring-2 focus:ring-black/20"
+          className="mb-10 w-full rounded-xl border border-stone-200/80 bg-white/90 px-4 py-3.5 text-[15px] text-stone-900 shadow-sm focus:border-stone-300 focus:outline-none focus:ring-1 focus:ring-stone-400/25"
         >
           {MEAL_ORDER.map((s) => (
             <option key={s} value={s}>
@@ -224,8 +210,8 @@ export function VoicePage() {
               <div className="relative mb-10 flex min-h-[11rem] w-full items-center justify-center">
                 {speech.listening && (
                   <>
-                    <div className="absolute h-[17rem] w-[17rem] animate-ping rounded-full bg-blue-500/[0.07]" />
-                    <div className="absolute h-[14rem] w-[14rem] rounded-full bg-blue-500/[0.06]" />
+                    <div className="absolute h-[15rem] w-[15rem] rounded-full bg-amber-400/[0.12]" />
+                    <div className="absolute h-[12rem] w-[12rem] rounded-full bg-stone-400/10" />
                   </>
                 )}
                 <button
@@ -234,51 +220,53 @@ export function VoicePage() {
                     setError(null)
                     speech.toggle()
                   }}
-                  className="relative inline-flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-4 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-100"
+                  className="relative inline-flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f7f6f3]"
                 >
                   <div
-                    className={`relative flex h-40 w-40 items-center justify-center rounded-full bg-gradient-to-b from-neutral-800 to-black shadow-[0_24px_48px_-12px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.06)_inset] ${!speech.supported ? 'opacity-45' : ''}`}
+                    className={`relative flex h-36 w-36 items-center justify-center rounded-full bg-stone-900 shadow-[0_20px_50px_-18px_rgba(0,0,0,0.35)] ${!speech.supported ? 'opacity-45' : ''}`}
                   >
-                    <Mic className="h-[4.25rem] w-[4.25rem] text-white" strokeWidth={1.25} />
+                    <Mic className="h-16 w-16 text-[#f5e6c8]" strokeWidth={1.35} />
                   </div>
                 </button>
               </div>
 
-              <h2 className="mb-3 max-w-[20rem] text-lg font-semibold leading-snug tracking-tight text-gray-900">
+              <h2 className="mb-3 max-w-[20rem] text-[17px] font-medium leading-snug tracking-tight text-stone-900">
                 {speech.listening ? 'Listening…' : speech.supported ? 'Tap the mic to speak' : 'Dictation unavailable'}
               </h2>
-              <p className="max-w-[19rem] text-sm leading-relaxed text-gray-500">
+              <p className="max-w-[19rem] text-sm leading-relaxed text-stone-500">
                 {speech.supported
-                  ? 'Describe your meal naturally. You can edit the text below for accuracy.'
-                  : 'Use Chrome or Edge on desktop/Android, or type your meal below.'}
+                  ? 'Describe ingredients and portions. Edit the text anytime.'
+                  : 'Use Chrome or Edge, or type below.'}
               </p>
             </div>
 
             <div className="mb-6">
-              <label className="text-label mb-2 block text-gray-400">Description</label>
+              <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">
+                Description
+              </label>
               <textarea
                 value={transcriptForDisplay}
                 onChange={(e) => speech.setTranscriptManual(e.target.value)}
                 rows={5}
-                placeholder="Example: I had grilled chicken breast with mixed salad and quinoa for lunch…"
-                className="min-h-36 w-full rounded-2xl border-0 bg-white p-5 text-[17px] leading-relaxed text-gray-900 shadow-sm ring-1 ring-black/[0.06] transition-shadow placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/15"
+                placeholder="Grilled salmon, rice, and greens…"
+                className="min-h-36 w-full rounded-2xl border border-stone-200/80 bg-white/90 p-5 text-[17px] leading-relaxed text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-stone-300 focus:outline-none focus:ring-1 focus:ring-stone-400/25"
               />
             </div>
 
-            {error && <p className="mb-6 text-sm leading-relaxed text-red-600">{error}</p>}
+            {error && <p className="mb-6 text-sm leading-relaxed text-red-600/90">{error}</p>}
 
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="flex-1 rounded-xl bg-white py-4 text-[15px] font-medium text-gray-800 shadow-sm ring-1 ring-black/[0.06] transition-colors hover:bg-gray-50"
+                className="flex-1 rounded-2xl border border-stone-300/80 bg-white/70 py-4 text-[15px] font-medium text-stone-700"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleAnalyze}
-                className="flex-1 rounded-xl bg-neutral-950 py-4 text-[15px] font-medium text-white shadow-lg transition-all hover:bg-black active:scale-[0.99]"
+                onClick={() => void handleAnalyze()}
+                className="flex-1 rounded-2xl bg-stone-900 py-4 text-[15px] font-medium text-[#f5e6c8] transition-colors hover:bg-stone-800"
               >
                 Review
               </button>
@@ -289,48 +277,44 @@ export function VoicePage() {
         {step === 'confirm' && previewItems && (
           <div className="space-y-8">
             <div>
-              <p className="text-label mb-2 text-gray-400">Check before saving</p>
-              <h3 className="text-xl font-semibold tracking-tight text-gray-900">Review estimate</h3>
-              <p className="mt-3 text-sm leading-relaxed text-gray-500">
-                We match ingredients to a local library and fill gaps with a rough estimate. Edit your
-                description anytime, then review again.
+              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Almost there</p>
+              <h3 className="text-[1.25rem] font-medium tracking-tight text-stone-900">Does this look right?</h3>
+              <p className="mt-3 text-sm leading-relaxed text-stone-500">
+                Estimates from your words—you can go back and adjust anytime.
               </p>
             </div>
-            <ul className="space-y-0 divide-y divide-gray-100 rounded-2xl border border-gray-100 bg-white p-1 shadow-sm ring-1 ring-black/[0.04]">
+            <ul className="divide-y divide-stone-200/80 border-y border-stone-200/80">
               {previewItems.map((i) => (
-                <li key={i.id} className="px-4 py-4 text-[15px] text-gray-800 first:pt-3 last:pb-3">
+                <li key={i.id} className="py-3.5 text-[15px] text-stone-800">
                   <span className="font-medium">{i.name}</span>
-                  <span className="text-gray-500"> — {i.calories} cal</span>
+                  <span className="text-stone-500"> — {i.calories} kcal</span>
                 </li>
               ))}
             </ul>
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="rounded-2xl bg-gray-50/90 py-5 ring-1 ring-black/[0.04]">
-                <div className="text-stat tabular-nums text-gray-900">{sumMealItems(previewItems).calories}</div>
-                <div className="mt-1 text-xs font-medium text-gray-500">calories</div>
-              </div>
-              <div className="rounded-2xl bg-gray-50/90 py-5 ring-1 ring-black/[0.04]">
-                <div className="font-semibold tabular-nums text-sm leading-snug text-gray-900">
-                  {sumMealItems(previewItems).protein}g / {sumMealItems(previewItems).carbs}g /{' '}
-                  {sumMealItems(previewItems).fat}g
-                </div>
-                <div className="mt-1 text-xs font-medium text-gray-500">P / C / F</div>
-              </div>
+            <div className="border-b border-stone-200/80 py-6 text-center">
+              <p className="text-3xl font-light tabular-nums text-stone-900">
+                {sumMealItems(previewItems).calories}
+              </p>
+              <p className="mt-1 text-sm text-stone-500">kcal total</p>
+              <p className="mt-4 text-xs tabular-nums text-stone-400">
+                P {sumMealItems(previewItems).protein}g · C {sumMealItems(previewItems).carbs}g · F{' '}
+                {sumMealItems(previewItems).fat}g
+              </p>
             </div>
             <div className="space-y-3 pt-2">
               <button
                 type="button"
                 onClick={handleConfirmLog}
-                className="w-full rounded-xl bg-neutral-950 py-4 text-[15px] font-medium text-white shadow-lg transition-all hover:bg-black active:scale-[0.99]"
+                className="w-full rounded-2xl bg-stone-900 py-4 text-[15px] font-medium text-[#f5e6c8] hover:bg-stone-800"
               >
                 Save to log
               </button>
               <button
                 type="button"
                 onClick={handleEditDescription}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-white py-3.5 text-sm font-medium text-gray-800 shadow-sm ring-1 ring-black/[0.06] transition-colors hover:bg-gray-50"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-stone-300/80 bg-white/70 py-3.5 text-sm font-medium text-stone-700"
               >
-                <Pencil className="h-4 w-4 text-gray-400" aria-hidden />
+                <Pencil className="h-4 w-4 text-stone-400" aria-hidden />
                 Edit description
               </button>
             </div>
@@ -341,40 +325,29 @@ export function VoicePage() {
       {step === 'listen' && (
         <>
           <div className="px-6 pb-8">
-            <p className="text-label mb-4 text-gray-400">Quick add</p>
-            <div className="space-y-3">
+            <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Suggestions</p>
+            <ul className="divide-y divide-stone-200/80 border-y border-stone-200/80">
               {QUICK_SUGGESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => applySuggestion(suggestion)}
-                  className="group flex w-full items-center justify-between rounded-2xl border border-gray-100 bg-white px-5 py-4 text-left shadow-sm ring-1 ring-black/[0.03] transition-colors hover:border-gray-200 hover:bg-gray-50/80"
-                >
-                  <span className="text-[15px] text-gray-800">{suggestion}</span>
-                  <Plus className="h-5 w-5 shrink-0 text-gray-300 transition-colors group-hover:text-gray-500" />
-                </button>
+                <li key={suggestion}>
+                  <button
+                    type="button"
+                    onClick={() => applySuggestion(suggestion)}
+                    className="flex w-full items-center justify-between gap-3 py-4 text-left text-[15px] text-stone-800 transition-colors active:bg-stone-200/25"
+                  >
+                    <span className="min-w-0 flex-1 leading-snug">{suggestion}</span>
+                    <Plus className="h-4 w-4 shrink-0 text-stone-300" strokeWidth={1.75} />
+                  </button>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
 
           <div className="px-6 pb-28">
-            <div className="rounded-2xl border border-gray-100 bg-gray-50/90 p-6 ring-1 ring-black/[0.03]">
-              <p className="text-label mb-3 text-gray-400">How it works</p>
-              <h3 className="mb-5 text-base font-semibold tracking-tight text-gray-900">Voice logging</h3>
-              <div className="space-y-5 text-sm leading-relaxed text-gray-600">
-                <div className="flex gap-4">
-                  <span className="text-label mt-0.5 w-6 shrink-0 text-gray-400">01</span>
-                  <p>Speak naturally about your meal and ingredients</p>
-                </div>
-                <div className="flex gap-4">
-                  <span className="text-label mt-0.5 w-6 shrink-0 text-gray-400">02</span>
-                  <p>Byte estimates nutrition from your words (edit text anytime)</p>
-                </div>
-                <div className="flex gap-4">
-                  <span className="text-label mt-0.5 w-6 shrink-0 text-gray-400">03</span>
-                  <p>Review and confirm to add to your daily log</p>
-                </div>
-              </div>
+            <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">How it works</p>
+            <div className="space-y-4 text-sm leading-relaxed text-stone-600">
+              <p>Speak like you’re texting a friend who’s helping in the kitchen.</p>
+              <p>Byte turns that into ingredients and numbers—you stay in control.</p>
+              <p>Review once, then it’s on your log.</p>
             </div>
           </div>
         </>

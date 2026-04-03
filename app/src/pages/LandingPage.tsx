@@ -16,7 +16,7 @@ export function LandingPage() {
   }, [navigate, state.onboardingComplete])
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center bg-white px-8">
+    <div className="flex min-h-svh w-full items-center justify-center bg-[#f7f6f3] px-8">
       <img
         src={logo}
         alt=""
