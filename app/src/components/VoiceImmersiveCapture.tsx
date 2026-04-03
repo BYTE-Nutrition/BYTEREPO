@@ -7,6 +7,8 @@ type Props = {
   transcript: string
   listening: boolean
   speechSupported: boolean
+  /** When set, replaces the default listening / mic hint line */
+  statusLine?: string
   onToggleMic: () => void
   liveItems: MealItem[]
   cookingTips: string[]
@@ -24,6 +26,7 @@ export function VoiceImmersiveCapture({
   transcript,
   listening,
   speechSupported,
+  statusLine,
   onToggleMic,
   liveItems,
   cookingTips,
@@ -114,7 +117,8 @@ export function VoiceImmersiveCapture({
           </div>
 
           <p className="mb-2 text-center text-sm font-medium text-stone-800">
-            {listening ? 'Listening…' : speechSupported ? 'Tap the mic to speak' : 'Dictation unavailable'}
+            {statusLine ??
+              (listening ? 'Listening…' : speechSupported ? 'Tap the mic to speak' : 'Dictation unavailable')}
           </p>
           {micVizError && (
             <p className="mb-2 max-w-xs text-center text-xs text-amber-800/90">{micVizError}</p>

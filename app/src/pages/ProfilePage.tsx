@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { AppScreenHeader } from '@/components/AppScreenHeader'
 import { useByte } from '@/context/useByte'
-import { USER_GOAL_OPTIONS } from '@/lib/goalsFromProfile'
-import type { UserGoal } from '@/lib/types'
+import { GOAL_PACE_OPTIONS, USER_GOAL_OPTIONS } from '@/lib/goalsFromProfile'
+import type { GoalPace, UserGoal, UserSex } from '@/lib/types'
 
 const field =
   'mt-2 w-full rounded-xl border border-stone-200/80 bg-white/90 px-3.5 py-3 text-[15px] text-stone-900 shadow-sm focus:border-stone-300 focus:outline-none focus:ring-1 focus:ring-stone-400/25'
@@ -36,7 +36,7 @@ export function ProfilePage() {
         <section>
           <p className={`${sectionTitle} mb-4`}>About you</p>
           <p className="mb-4 text-sm leading-relaxed text-stone-500">
-            Age and goal recalculate calorie and protein targets. You can still fine-tune numbers below.
+            Body stats and goals recalculate your daily targets. You can still fine-tune numbers below.
           </p>
           <div className="space-y-5 rounded-2xl border border-stone-200/60 bg-white/50 px-4 py-5">
             <label className="block text-sm font-medium text-stone-600">
@@ -63,6 +63,51 @@ export function ProfilePage() {
               </select>
             </label>
             <label className="block text-sm font-medium text-stone-600">
+              Sex (for energy estimates)
+              <select
+                className={field}
+                value={state.profile.sex}
+                onChange={(e) => updateProfile({ sex: e.target.value as UserSex })}
+              >
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="prefer_not_say">Prefer not to say</option>
+              </select>
+            </label>
+            <label className="block text-sm font-medium text-stone-600">
+              Height (cm)
+              <input
+                type="number"
+                min={120}
+                max={220}
+                className={field}
+                value={state.profile.heightCm}
+                onChange={(e) => updateProfile({ heightCm: Number(e.target.value) || 170 })}
+              />
+            </label>
+            <label className="block text-sm font-medium text-stone-600">
+              Weight (kg)
+              <input
+                type="number"
+                min={35}
+                max={250}
+                className={field}
+                value={state.profile.weightKg}
+                onChange={(e) => updateProfile({ weightKg: Number(e.target.value) || 72 })}
+              />
+            </label>
+            <label className="block text-sm font-medium text-stone-600">
+              Home-cooked meals / week
+              <input
+                type="number"
+                min={0}
+                max={21}
+                className={field}
+                value={state.profile.cooksPerWeek}
+                onChange={(e) => updateProfile({ cooksPerWeek: Number(e.target.value) || 0 })}
+              />
+            </label>
+            <label className="block text-sm font-medium text-stone-600">
               Main goal
               <select
                 className={field}
@@ -72,6 +117,20 @@ export function ProfilePage() {
                 {USER_GOAL_OPTIONS.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm font-medium text-stone-600">
+              Goal pace
+              <select
+                className={field}
+                value={state.profile.goalPace}
+                onChange={(e) => updateProfile({ goalPace: e.target.value as GoalPace })}
+              >
+                {GOAL_PACE_OPTIONS.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label} — {o.hint}
                   </option>
                 ))}
               </select>

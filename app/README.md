@@ -2,6 +2,12 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+## Byte: live voice (OpenAI Realtime)
+
+For **AI voice** in the app, run the small server in [`../realtime-proxy`](../realtime-proxy) (`npm start` there) and put your OpenAI key in that terminal only—not in the app.
+
+In **`app/.env`**, `VITE_REALTIME_SESSION_URL=/realtime/session` is the usual local setup. For production, use your real HTTPS URL (see [`docs/REALTIME_SESSION_API.md`](./docs/REALTIME_SESSION_API.md)).
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)

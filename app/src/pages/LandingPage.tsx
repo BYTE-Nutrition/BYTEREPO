@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
-import logo from '../assets/byte-logo.jpg'
 import { useNavigate } from 'react-router-dom'
+import { ByteLogo } from '@/components/ByteLogo'
 import { useByte } from '@/context/useByte'
 
 const SPLASH_MS = 2200
@@ -17,12 +17,9 @@ export function LandingPage() {
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-[#f7f6f3] px-8">
-      <img
-        src={logo}
-        alt=""
-        className="landing-logo-reveal h-[clamp(4.5rem,22vw,7.5rem)] w-auto max-w-[min(100%,420px)] object-contain [animation-delay:120ms]"
-        decoding="async"
-      />
+      <div className="landing-logo-reveal [animation-delay:120ms]">
+        <ByteLogo className="[&>span:last-child]:px-4 [&>span:last-child]:py-2 [&>span:last-child]:text-[clamp(1.5rem,7vw,2.5rem)]" />
+      </div>
     </div>
   )
 }

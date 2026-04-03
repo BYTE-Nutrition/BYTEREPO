@@ -1,21 +1,37 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import logo from '@/assets/byte-logo.jpg'
+import { ByteLogo } from '@/components/ByteLogo'
 import { useByte } from '@/context/useByte'
-import { USER_GOAL_OPTIONS, computeGoalsFromProfile } from '@/lib/goalsFromProfile'
-import type { UserGoal, UserProfile } from '@/lib/types'
+import {
+  GOAL_PACE_OPTIONS,
+  USER_GOAL_OPTIONS,
+  computeGoalsFromProfile,
+} from '@/lib/goalsFromProfile'
+import type { GoalPace, UserGoal, UserProfile, UserSex } from '@/lib/types'
 
 const AGES = Array.from({ length: 88 }, (_, i) => i + 13)
-const STEP_COUNT = 4
+const STEP_COUNT = 10
+
+const SEX_OPTIONS: { id: UserSex; label: string; hint: string }[] = [
+  { id: 'female', label: 'Female', hint: 'For energy estimates' },
+  { id: 'male', label: 'Male', hint: 'For energy estimates' },
+  { id: 'prefer_not_say', label: 'Prefer not to say', hint: 'We’ll use a blended formula' },
+]
 
 export function OnboardingPage() {
   const navigate = useNavigate()
   const { state, completeOnboarding } = useByte()
   const [step, setStep] = useState(0)
+
   const [name, setName] = useState('')
   const [age, setAge] = useState(28)
+  const [sex, setSex] = useState<UserSex>('prefer_not_say')
+  const [heightCm, setHeightCm] = useState(170)
+  const [weightKg, setWeightKg] = useState(72)
+  const [cooksPerWeek, setCooksPerWeek] = useState(4)
   const [goal, setGoal] = useState<UserGoal>('maintenance')
+  const [goalPace, setGoalPace] = useState<GoalPace>('steady')
 
   const listRef = useRef<HTMLDivElement>(null)
   const ageRef = useRef(age)
@@ -23,13 +39,27 @@ export function OnboardingPage() {
     ageRef.current = age
   }, [age])
 
+  const draftProfile: UserProfile = useMemo(
+    () => ({
+      name: name.trim(),
+      age,
+      sex,
+      heightCm,
+      weightKg,
+      cooksPerWeek,
+      goal,
+      goalPace,
+    }),
+    [name, age, sex, heightCm, weightKg, cooksPerWeek, goal, goalPace],
+  )
+
+  const previewGoals = useMemo(() => computeGoalsFromProfile(draftProfile), [draftProfile])
+
   useEffect(() => {
     if (state.onboardingComplete) {
       navigate('/home', { replace: true })
     }
   }, [state.onboardingComplete, navigate])
-
-  const previewGoals = useMemo(() => computeGoalsFromProfile(age, goal), [age, goal])
 
   const scrollAgeIntoView = useCallback((a: number) => {
     const el = listRef.current?.querySelector(`[data-age="${a}"]`)
@@ -46,8 +76,16 @@ export function OnboardingPage() {
   }, [step])
 
   const canContinue = () => {
-    if (step === 1) return name.trim().length >= 1
-    return true
+    switch (step) {
+      case 1:
+        return name.trim().length >= 1
+      case 4:
+        return heightCm >= 120 && heightCm <= 220
+      case 5:
+        return weightKg >= 35 && weightKg <= 250
+      default:
+        return true
+    }
   }
 
   const next = () => {
@@ -56,33 +94,40 @@ export function OnboardingPage() {
   }
 
   const finish = () => {
-    const profile: UserProfile = {
+    completeOnboarding({
       name: name.trim(),
       age,
+      sex,
+      heightCm,
+      weightKg,
+      cooksPerWeek,
       goal,
-    }
-    completeOnboarding(profile)
+      goalPace,
+    })
     navigate('/home', { replace: true })
   }
 
+  const stepLabel = step > 0 && step < STEP_COUNT ? `Step ${step} of ${STEP_COUNT - 1}` : ''
+
   return (
     <div className="flex min-h-svh flex-col bg-[#f7f6f3]">
-      <div className="flex flex-1 flex-col px-6 pt-14 pb-8">
-        <div className="mb-10 flex items-center justify-center">
-          <img
-            src={logo}
-            alt=""
-            className="h-11 w-auto max-w-[200px] object-contain opacity-90"
-            decoding="async"
-          />
+      <div className="flex flex-1 flex-col px-6 pb-8 pt-[max(2.5rem,env(safe-area-inset-top))]">
+        <div className="mb-8 flex items-center justify-center">
+          <ByteLogo className="opacity-95" />
         </div>
 
-        <div className="mb-8 flex justify-center gap-2">
+        {step > 0 && (
+          <p className="mb-4 text-center text-[11px] font-medium uppercase tracking-[0.2em] text-stone-400">
+            {stepLabel}
+          </p>
+        )}
+
+        <div className="mb-8 flex justify-center gap-1.5">
           {Array.from({ length: STEP_COUNT }).map((_, i) => (
             <div
               key={i}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === step ? 'w-8 bg-neutral-900' : i < step ? 'w-2 bg-neutral-400' : 'w-2 bg-neutral-200'
+              className={`h-1 rounded-full transition-all duration-300 ${
+                i === step ? 'w-6 bg-stone-900' : i < step ? 'w-1.5 bg-stone-400' : 'w-1.5 bg-stone-200'
               }`}
             />
           ))}
@@ -90,20 +135,21 @@ export function OnboardingPage() {
 
         <div className="mx-auto w-full max-w-sm flex-1">
           {step === 0 && (
-            <div>
-              <p className="text-label mb-3 text-center text-stone-400">Welcome</p>
-              <h1 className="mb-4 text-center text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
-                Let&apos;s personalize Byte for you
+            <div className="text-center">
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.2em] text-stone-400">Welcome</p>
+              <h1 className="mb-4 text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
+                Let&apos;s set up Byte with you
               </h1>
-              <p className="text-center text-[15px] leading-relaxed text-stone-500">
-                A short conversation. Then we&apos;ll set gentle calorie and protein targets.
+              <p className="mx-auto max-w-[20rem] text-[15px] leading-relaxed text-stone-500">
+                A few questions about you, your kitchen, and how you want to feel—then we&apos;ll tune your
+                targets.
               </p>
             </div>
           )}
 
           {step === 1 && (
             <div>
-              <p className="text-label mb-3 text-stone-400">Question 1 of 3</p>
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">About you</p>
               <h1 className="mb-8 text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
                 What should we call you?
               </h1>
@@ -111,7 +157,7 @@ export function OnboardingPage() {
                 type="text"
                 autoFocus
                 autoComplete="given-name"
-                placeholder="Your first name"
+                placeholder="First name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && canContinue() && next()}
@@ -122,7 +168,7 @@ export function OnboardingPage() {
 
           {step === 2 && (
             <div>
-              <p className="text-label mb-3 text-stone-400">Question 2 of 3</p>
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">About you</p>
               <h1 className="mb-2 text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
                 How old are you?
               </h1>
@@ -160,9 +206,7 @@ export function OnboardingPage() {
                         scrollAgeIntoView(a)
                       }}
                       className={`flex h-14 w-full shrink-0 snap-center items-center justify-center text-lg transition-all ${
-                        a === age
-                          ? 'font-semibold text-stone-900'
-                          : 'font-normal text-stone-300'
+                        a === age ? 'font-semibold text-stone-900' : 'font-normal text-stone-300'
                       }`}
                     >
                       {a}
@@ -175,11 +219,129 @@ export function OnboardingPage() {
 
           {step === 3 && (
             <div>
-              <p className="text-label mb-3 text-stone-400">Question 3 of 3</p>
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Body</p>
               <h1 className="mb-2 text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
-                What&apos;s your main goal?
+                Which best describes you?
               </h1>
-              <p className="mb-6 text-sm text-stone-500">We&apos;ll tune calories and protein to match.</p>
+              <p className="mb-6 text-sm text-stone-500">Helps us estimate your daily energy needs.</p>
+              <div className="space-y-2">
+                {SEX_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setSex(opt.id)}
+                    className={`flex w-full items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all ${
+                      sex === opt.id
+                        ? 'border-stone-800 bg-stone-900 text-white shadow-sm'
+                        : 'border-stone-200/80 bg-white/80 text-stone-800 hover:border-stone-300/80'
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
+                        sex === opt.id ? 'border-white bg-white text-stone-900' : 'border-stone-300'
+                      }`}
+                    >
+                      {sex === opt.id && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                    </span>
+                    <span>
+                      <span className="block font-semibold">{opt.label}</span>
+                      <span
+                        className={`mt-0.5 block text-sm ${sex === opt.id ? 'text-white/75' : 'text-stone-500'}`}
+                      >
+                        {opt.hint}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div>
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Body</p>
+              <h1 className="mb-2 text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
+                How tall are you?
+              </h1>
+              <p className="mb-8 text-sm text-stone-500">Centimeters</p>
+              <div className="mb-6 text-center">
+                <span className="text-5xl font-light tabular-nums text-stone-900">{heightCm}</span>
+                <span className="ml-1 text-lg text-stone-400">cm</span>
+              </div>
+              <input
+                type="range"
+                min={120}
+                max={220}
+                value={heightCm}
+                onChange={(e) => setHeightCm(Number(e.target.value))}
+                className="h-2 w-full cursor-pointer appearance-none rounded-full bg-stone-200 accent-stone-900"
+              />
+              <div className="mt-2 flex justify-between text-xs text-stone-400">
+                <span>120</span>
+                <span>220</span>
+              </div>
+            </div>
+          )}
+
+          {step === 5 && (
+            <div>
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Body</p>
+              <h1 className="mb-2 text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
+                What&apos;s your weight?
+              </h1>
+              <p className="mb-8 text-sm text-stone-500">Kilograms</p>
+              <div className="mb-6 text-center">
+                <span className="text-5xl font-light tabular-nums text-stone-900">{weightKg}</span>
+                <span className="ml-1 text-lg text-stone-400">kg</span>
+              </div>
+              <input
+                type="range"
+                min={40}
+                max={180}
+                value={weightKg}
+                onChange={(e) => setWeightKg(Number(e.target.value))}
+                className="h-2 w-full cursor-pointer appearance-none rounded-full bg-stone-200 accent-stone-900"
+              />
+              <div className="mt-2 flex justify-between text-xs text-stone-400">
+                <span>40</span>
+                <span>180</span>
+              </div>
+            </div>
+          )}
+
+          {step === 6 && (
+            <div>
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Kitchen</p>
+              <h1 className="mb-2 text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
+                How often do you cook at home?
+              </h1>
+              <p className="mb-8 text-sm text-stone-500">Meals you prepare yourself per week</p>
+              <div className="mb-6 text-center">
+                <span className="text-5xl font-light tabular-nums text-stone-900">{cooksPerWeek}</span>
+                <span className="ml-1 text-lg text-stone-400">× / week</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={21}
+                value={cooksPerWeek}
+                onChange={(e) => setCooksPerWeek(Number(e.target.value))}
+                className="h-2 w-full cursor-pointer appearance-none rounded-full bg-stone-200 accent-stone-900"
+              />
+              <div className="mt-2 flex justify-between text-xs text-stone-400">
+                <span>0</span>
+                <span>21</span>
+              </div>
+            </div>
+          )}
+
+          {step === 7 && (
+            <div>
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Goals</p>
+              <h1 className="mb-2 text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
+                What&apos;s your main focus?
+              </h1>
+              <p className="mb-6 text-sm text-stone-500">We&apos;ll align calories and protein around this.</p>
               <div className="max-h-[min(52vh,22rem)] space-y-2 overflow-y-auto pr-1">
                 {USER_GOAL_OPTIONS.map((opt) => (
                   <button
@@ -194,7 +356,7 @@ export function OnboardingPage() {
                   >
                     <span
                       className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
-                        goal === opt.id ? 'border-white bg-white text-neutral-900' : 'border-stone-300'
+                        goal === opt.id ? 'border-white bg-white text-stone-900' : 'border-stone-300'
                       }`}
                     >
                       {goal === opt.id && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
@@ -210,15 +372,79 @@ export function OnboardingPage() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
 
-              <div className="mt-8 rounded-2xl border border-stone-200/60 bg-white/50 p-4">
-                <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">
-                  Starting targets
+          {step === 8 && (
+            <div>
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Timeline</p>
+              <h1 className="mb-2 text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
+                How fast do you want to move?
+              </h1>
+              <p className="mb-6 text-sm text-stone-500">
+                This sets how strong your calorie adjustment is. You can change it later.
+              </p>
+              <div className="space-y-2">
+                {GOAL_PACE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setGoalPace(opt.id)}
+                    className={`flex w-full items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all ${
+                      goalPace === opt.id
+                        ? 'border-stone-800 bg-stone-900 text-white shadow-sm'
+                        : 'border-stone-200/80 bg-white/80 text-stone-800 hover:border-stone-300/80'
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
+                        goalPace === opt.id ? 'border-white bg-white text-stone-900' : 'border-stone-300'
+                      }`}
+                    >
+                      {goalPace === opt.id && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                    </span>
+                    <span>
+                      <span className="block font-semibold">{opt.label}</span>
+                      <span
+                        className={`mt-0.5 block text-sm ${
+                          goalPace === opt.id ? 'text-white/75' : 'text-stone-500'
+                        }`}
+                      >
+                        {opt.hint}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 9 && (
+            <div>
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Ready</p>
+              <h1 className="mb-6 text-[1.625rem] font-medium leading-snug tracking-[-0.02em] text-stone-900">
+                You&apos;re all set{name.trim() ? `, ${name.trim()}` : ''}
+              </h1>
+              <div className="space-y-4 rounded-2xl border border-stone-200/60 bg-white/50 p-5 text-sm text-stone-600">
+                <p>
+                  <span className="text-stone-400">Height · weight · age</span>
+                  <br />
+                  <span className="font-medium text-stone-900">
+                    {heightCm} cm · {weightKg} kg · {age} yrs
+                  </span>
                 </p>
-                <p className="text-sm leading-relaxed text-stone-600">
-                  <span className="font-medium text-stone-900">{previewGoals.calorieGoal} kcal</span> daily ·{' '}
-                  <span className="font-medium text-stone-900">{previewGoals.proteinGoal}g protein</span>
-                  <span className="text-stone-500"> — tweak anytime in Profile.</span>
+                <p>
+                  <span className="text-stone-400">Cooking at home</span>
+                  <br />
+                  <span className="font-medium text-stone-900">~{cooksPerWeek} meals / week</span>
+                </p>
+                <p>
+                  <span className="text-stone-400">Daily targets</span>
+                  <br />
+                  <span className="font-medium text-stone-900">
+                    {previewGoals.calorieGoal} kcal · {previewGoals.proteinGoal}g protein
+                  </span>
+                  <span className="text-stone-500"> — adjust anytime in Profile.</span>
                 </p>
               </div>
             </div>
@@ -259,7 +485,6 @@ export function OnboardingPage() {
           )}
         </div>
       </div>
-
     </div>
   )
 }
