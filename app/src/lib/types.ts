@@ -85,3 +85,10 @@ export const MEAL_LABELS: Record<MealSlot, string> = {
   snack: 'Snack',
   dinner: 'Dinner',
 }
+
+/** Passed via `navigate('/voice?...', { state })` */
+export type VoiceLocationState = {
+  autoStartVoice?: boolean
+  prefillTranscript?: string
+  immersive?: boolean
+}

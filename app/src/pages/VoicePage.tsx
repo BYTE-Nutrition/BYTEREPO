@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Mic, Pencil, Plus } from 'lucide-react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { AppScreenHeader } from '@/components/AppScreenHeader'
 import { VoiceImmersiveCapture } from '@/components/VoiceImmersiveCapture'
 import { useByte } from '@/context/useByte'
+import { useVoiceEntry } from '@/context/VoiceEntryContext'
 import { useMicLevel } from '@/hooks/useMicLevel'
 import { useOpenAiRealtimeVoice } from '@/hooks/useOpenAiRealtimeVoice'
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
 import { getCookingTips } from '@/lib/cookingTips'
 import { parseMealWithApi, parseMealTranscriptBestEffort } from '@/lib/mealParseApi'
 import { QUICK_SUGGESTIONS, parseMealFromTranscript, sumMealItems } from '@/lib/nutrition'
-import { MEAL_LABELS, MEAL_ORDER, type MealItem, type MealSlot } from '@/lib/types'
+import { MEAL_LABELS, MEAL_ORDER, type MealItem, type MealSlot, type VoiceLocationState } from '@/lib/types'
 
 function parseSlot(s: string | null): MealSlot {
   if (s && MEAL_ORDER.includes(s as MealSlot)) return s as MealSlot
@@ -22,6 +23,8 @@ export function VoicePage() {
   const location = useLocation()
   const prefillApplied = useRef(false)
   const liveParseSeq = useRef(0)
+  const autoStartConsumedRef = useRef(false)
+  const beginImmersiveListeningRef = useRef<() => void>(() => {})
   const [params] = useSearchParams()
   const initialSlot = useMemo(() => parseSlot(params.get('slot')), [params])
   const [slot, setSlot] = useState<MealSlot>(initialSlot)
@@ -38,10 +41,17 @@ export function VoicePage() {
 
   const wantsImmersive =
     params.get('capture') === '1' ||
-    (location.state as { immersive?: boolean } | null)?.immersive === true
+    (location.state as VoiceLocationState | null)?.immersive === true
   const showImmersive = wantsImmersive && step === 'listen'
 
-  const { logMeal } = useByte()
+  const { logMeal, goals } = useByte()
+  const { takePrimedStream, releasePrimedMic } = useVoiceEntry()
+
+  const realtimeGoalsHeader = useMemo(
+    () =>
+      `User's daily goals: ${goals.calorieGoal} kcal, ${goals.proteinGoal}g protein, ${goals.carbsGoal}g carbs, ${goals.fatGoal}g fat.`,
+    [goals.calorieGoal, goals.carbsGoal, goals.fatGoal, goals.proteinGoal],
+  )
 
   const realtimeSessionUrl = import.meta.env.VITE_REALTIME_SESSION_URL
   const realtimeConfigured = Boolean(realtimeSessionUrl?.trim())
@@ -55,6 +65,8 @@ export function VoicePage() {
   const realtime = useOpenAiRealtimeVoice({
     sessionUrl: realtimeSessionUrl,
     audioRef: realtimeAudioRef,
+    takePrimedStream,
+    goalsHeader: realtimeGoalsHeader,
     onError: (msg) => {
       setError(msg)
       setFallbackSpeech(true)
@@ -100,7 +112,7 @@ export function VoicePage() {
 
   useEffect(() => {
     if (prefillApplied.current) return
-    const st = location.state as { prefillTranscript?: string } | undefined
+    const st = location.state as VoiceLocationState | null
     const text = st?.prefillTranscript?.trim()
     if (!text) return
     prefillApplied.current = true
@@ -125,6 +137,20 @@ export function VoicePage() {
 
   const immersiveSpeechSupported = speech.supported || immersiveRealtimeOn
 
+  const beginImmersiveListening = useCallback(() => {
+    setError(null)
+    if (immersiveRealtimeOn) {
+      speech.setTranscriptManual('')
+      void realtime.connect()
+      return
+    }
+    const primed = takePrimedStream()
+    primed?.getTracks().forEach((t) => t.stop())
+    speech.start()
+  }, [immersiveRealtimeOn, realtime, speech, takePrimedStream])
+
+  beginImmersiveListeningRef.current = beginImmersiveListening
+
   const toggleImmersiveMic = useCallback(() => {
     setError(null)
     if (immersiveRealtimeOn) {
@@ -140,14 +166,14 @@ export function VoicePage() {
         speech.setTranscriptManual(t)
         return
       }
-      speech.setTranscriptManual('')
-      void realtime.connect()
+      beginImmersiveListening()
       return
     }
     speech.toggle()
-  }, [immersiveRealtimeOn, realtime, speech])
+  }, [beginImmersiveListening, immersiveRealtimeOn, realtime, speech])
 
   const exitImmersive = useCallback(() => {
+    releasePrimedMic()
     if (immersiveRealtimeOn && (realtime.status === 'live' || realtime.status === 'connecting')) {
       if (realtime.status === 'live') {
         speech.setTranscriptManual(realtime.userTranscript)
@@ -158,7 +184,28 @@ export function VoicePage() {
     next.delete('capture')
     const qs = next.toString()
     navigate({ pathname: location.pathname, search: qs ? `?${qs}` : '' }, { replace: true, state: null })
-  }, [immersiveRealtimeOn, location.pathname, navigate, params, realtime, speech])
+  }, [immersiveRealtimeOn, location.pathname, navigate, params, realtime, releasePrimedMic, speech])
+
+  useLayoutEffect(() => {
+    if (!showImmersive) {
+      autoStartConsumedRef.current = false
+      return
+    }
+    const st = location.state as VoiceLocationState | null
+    if (!st?.autoStartVoice || st.prefillTranscript?.trim()) return
+    if (autoStartConsumedRef.current) return
+    autoStartConsumedRef.current = true
+
+    navigate(
+      { pathname: location.pathname, search: location.search, hash: location.hash },
+      { replace: true, state: null },
+    )
+
+    queueMicrotask(() => {
+      beginImmersiveListeningRef.current()
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid re-running after navigate clears state
+  }, [showImmersive, location.pathname, location.search, location.hash, navigate])
 
   useEffect(() => {
     if (!showImmersive || step !== 'listen') {

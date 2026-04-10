@@ -21,7 +21,8 @@ The browser **never** receives your standard API key.
 - **URL:** Whatever you set in `VITE_REALTIME_SESSION_URL` (e.g. `https://api.example.com/realtime/session`)
 - **Content-Type:** `application/sdp` (or `text/plain` if your framework maps it)
 - **Body:** Raw WebRTC **offer** SDP string (not JSON).
-- **CORS:** Allow your web app origin.
+- **Optional headers:** `X-Byte-Goals` — free-text line appended to the Realtime `instructions` (e.g. `User's daily goals: 1800 kcal, 140g protein, …`). The Byte app sends the user’s macro targets when connecting.
+- **CORS:** Allow your web app origin (including custom headers if you use `X-Byte-Goals`).
 
 ## Success response
 

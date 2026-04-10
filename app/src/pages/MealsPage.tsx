@@ -2,11 +2,13 @@ import { ChevronRight, Mic } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { AppScreenHeader } from '@/components/AppScreenHeader'
 import { useByte } from '@/context/useByte'
+import { useVoiceEntry } from '@/context/VoiceEntryContext'
 import { MEAL_LABELS, MEAL_ORDER } from '@/lib/types'
 
 export function MealsPage() {
   const navigate = useNavigate()
   const { day } = useByte()
+  const { primeMic } = useVoiceEntry()
 
   return (
     <div className="min-h-full bg-[#f7f6f3] text-stone-800">
@@ -19,7 +21,10 @@ export function MealsPage() {
           <button
             type="button"
             aria-label="Log with voice"
-            onClick={() => navigate('/voice?capture=1')}
+            onClick={async () => {
+              await primeMic()
+              navigate('/voice?capture=1', { state: { autoStartVoice: true } })
+            }}
             className="-mr-1 rounded-full p-2 text-amber-700 transition-colors hover:bg-stone-200/50"
           >
             <Mic className="h-5 w-5" strokeWidth={1.75} />

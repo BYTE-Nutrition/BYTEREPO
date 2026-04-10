@@ -5,7 +5,7 @@ The Byte app can call your server to turn a **voice transcript** into structured
 ## Endpoint
 
 - **Method:** `POST`
-- **URL:** Whatever you set in `VITE_MEAL_PARSE_URL` (e.g. `https://api.example.com/meal-parse`)
+- **URL:** Whatever you set in `VITE_MEAL_PARSE_URL` (e.g. `https://api.example.com/meal-parse` or `http://localhost:5050/meal-parse` on the same host as [realtime-proxy](../../realtime-proxy))
 - **Content-Type:** `application/json`
 - **CORS:** Allow your web app origin.
 
