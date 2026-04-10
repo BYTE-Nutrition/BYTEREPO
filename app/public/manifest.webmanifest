@@ -1,0 +1,18 @@
+{
+  "name": "Byte",
+  "short_name": "Byte",
+  "description": "AI nutrition and meal logging",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f6f3",
+  "theme_color": "#292524",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

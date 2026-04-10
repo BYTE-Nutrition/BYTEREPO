@@ -64,7 +64,9 @@ See **`realtime-proxy/.env.example`** and **`app/.env.example`**.
 
 ## Deployment
 
-- **Frontend (`app/`)** → **Vercel**: set root directory to **`app`**, build command **`npm run build`**, output **`dist`**. **`app/vercel.json`** rewrites all routes to **`index.html`** so React Router works on refresh.
+- **Frontend (`app/`)** → **Vercel** (pick one):
+  - **Root directory = `app`:** build **`npm run build`**, output **`dist`**. **`app/vercel.json`** SPA rewrites fix refresh and **Add to Home Screen** deep links.
+  - **Root directory = repo root:** use the root **`vercel.json`** (`installCommand` / `buildCommand` / `outputDirectory` + same rewrites).
 - **Backend (`realtime-proxy/`)** → **Railway** or **Render**: run **`node index.mjs`** (or **`npm start`**), set **`OPENAI_API_KEY`** and **`PORT`**, expose a public URL, then set **`VITE_*`** on Vercel to that HTTPS base + paths.
 
 ## Scripts (repo root)
