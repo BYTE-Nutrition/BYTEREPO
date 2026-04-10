@@ -7,6 +7,10 @@ export type UseOpenAiRealtimeVoiceOptions = {
   sessionUrl: string | undefined
   /** Remote model audio */
   audioRef: RefObject<HTMLAudioElement | null>
+  /** Mic opened on the entry button (same user gesture); avoids a second tap for getUserMedia after navigation. */
+  takePrimedStream?: () => MediaStream | null
+  /** Sent as `X-Byte-Goals` when posting SDP (e.g. daily macro targets for the Realtime session). */
+  goalsHeader?: string
   onError?: (message: string) => void
 }
 
@@ -39,7 +43,7 @@ function parseEvent(raw: string): Record<string, unknown> | null {
  * SDP is exchanged via your backend (see app/docs/REALTIME_SESSION_API.md).
  */
 export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
-  const { sessionUrl, audioRef, onError } = options
+  const { sessionUrl, audioRef, takePrimedStream, goalsHeader, onError } = options
   const [status, setStatus] = useState<RealtimeVoiceStatus>('idle')
   const [lastError, setLastError] = useState<string | null>(null)
   const [userTranscript, setUserTranscript] = useState('')
@@ -162,7 +166,10 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
         }
       }
 
-      const ms = await navigator.mediaDevices.getUserMedia({ audio: true })
+      let ms = takePrimedStream?.() ?? null
+      if (!ms) {
+        ms = await navigator.mediaDevices.getUserMedia({ audio: true })
+      }
       setLocalStream(ms)
       ms.getTracks().forEach((t) => pc.addTrack(t, ms))
 
@@ -175,12 +182,18 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
       await pc.setLocalDescription(offer)
 
       const url = sessionUrl.trim()
+      const sdpHeaders: Record<string, string> = {
+        'Content-Type': 'application/sdp',
+      }
+      const goals = goalsHeader?.trim()
+      if (goals) {
+        sdpHeaders['X-Byte-Goals'] = goals
+      }
+
       const sdpResponse = await fetch(url, {
         method: 'POST',
         body: offer.sdp ?? '',
-        headers: {
-          'Content-Type': 'application/sdp',
-        },
+        headers: sdpHeaders,
       })
 
       if (!sdpResponse.ok) {
@@ -209,7 +222,7 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
       setStatus('error')
       onError?.(msg)
     }
-  }, [audioRef, disconnect, handleDataMessage, onError, sessionUrl])
+  }, [audioRef, disconnect, goalsHeader, handleDataMessage, onError, sessionUrl, takePrimedStream])
 
   useEffect(() => {
     return () => {

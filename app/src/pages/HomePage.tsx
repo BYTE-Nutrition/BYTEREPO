@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { ByteLogo } from '@/components/ByteLogo'
 import { HomeMenuDrawer } from '@/components/HomeMenuDrawer'
 import { useByte } from '@/context/useByte'
+import { useVoiceEntry } from '@/context/VoiceEntryContext'
 import { dayNutritionTotals } from '@/lib/aggregate'
 import { MEAL_LABELS, MEAL_ORDER } from '@/lib/types'
 
@@ -19,6 +20,7 @@ export function HomePage() {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const { state, day, goals, setWaterGlasses } = useByte()
+  const { primeMic } = useVoiceEntry()
   const firstName = state.profile.name.trim().split(/\s+/)[0] ?? ''
   const totals = dayNutritionTotals(day)
   const exercise = day.exerciseCalories
@@ -62,7 +64,10 @@ export function HomePage() {
         <div className="mb-16 flex flex-col items-center">
           <button
             type="button"
-            onClick={() => navigate('/voice?capture=1')}
+            onClick={async () => {
+              await primeMic()
+              navigate('/voice?capture=1', { state: { autoStartVoice: true } })
+            }}
             aria-label="Log meal with voice"
             className="group flex h-[5.5rem] w-[5.5rem] items-center justify-center rounded-full bg-stone-900 shadow-[0_20px_50px_-18px_rgba(0,0,0,0.35)] transition-transform active:scale-[0.97] motion-safe:transition-shadow motion-safe:duration-300 hover:shadow-[0_24px_56px_-16px_rgba(0,0,0,0.4)]"
           >

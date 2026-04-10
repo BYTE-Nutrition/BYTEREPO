@@ -12,8 +12,9 @@ dist
 dist-ssr
 *.local
 
-# Local env (copy from .env.example)
+# Local env (copy from .env.example) — never commit secrets
 .env
+.env.local
 
 # Editor directories and files
 .vscode/*

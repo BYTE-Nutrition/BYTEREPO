@@ -2,3 +2,19 @@
 node_modules/
 .expo/
 **/.expo/
+
+# Environment — never commit secrets
+.env
+.env.local
+.env.*.local
+app/.env
+app/.env.local
+realtime-proxy/.env
+realtime-proxy/.env.local
+
+# Build output
+dist/
+**/dist/
+
+# OS
+.DS_Store

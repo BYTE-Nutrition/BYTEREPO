@@ -9,10 +9,14 @@ export default defineConfig({
     alias: { '@': path.resolve(__dirname, './src') },
   },
   server: {
-    // Sends /realtime/session to the voice server on port 5050 while you use npm run dev.
+    // Proxies to realtime-proxy on port 5050 during npm run dev.
     proxy: {
       '/realtime/session': {
-        target: 'http://127.0.0.1:5050',
+        target: 'http://localhost:5050',
+        changeOrigin: true,
+      },
+      '/meal-parse': {
+        target: 'http://localhost:5050',
         changeOrigin: true,
       },
     },
@@ -20,7 +24,11 @@ export default defineConfig({
   preview: {
     proxy: {
       '/realtime/session': {
-        target: 'http://127.0.0.1:5050',
+        target: 'http://localhost:5050',
+        changeOrigin: true,
+      },
+      '/meal-parse': {
+        target: 'http://localhost:5050',
         changeOrigin: true,
       },
     },

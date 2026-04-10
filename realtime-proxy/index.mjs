@@ -1,27 +1,44 @@
 /**
- * Minimal OpenAI Realtime WebRTC proxy (unified SDP relay).
- * POST raw offer SDP to /realtime/session — returns answer SDP.
- * Requires OPENAI_API_KEY in the environment (never expose to the browser).
+ * Byte realtime-proxy: Realtime WebRTC SDP relay + optional meal-parse (Chat Completions).
+ *
+ * OPENAI_API_KEY must be set as an environment variable on your hosting platform
+ * (e.g. Railway, Render, Fly.io for this Node server). Never hardcode it in this file
+ * or commit it to git. The Vite frontend (Vercel/Netlify/etc.) only receives public
+ * URLs via VITE_* vars — never put the OpenAI key in the client bundle.
+ *
+ * Locally: copy `realtime-proxy/.env.example` to `realtime-proxy/.env` or run
+ * `export OPENAI_API_KEY=...` before `npm start`. The key is read only from
+ * `process.env` and is not logged or returned in any JSON/body response.
  */
 import cors from 'cors'
 import express from 'express'
+import { registerMealParse } from './meal-parse.mjs'
 
 const PORT = Number(process.env.PORT) || 5050
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
-const sessionConfig = JSON.stringify({
-  type: 'realtime',
-  model: process.env.OPENAI_REALTIME_MODEL || 'gpt-realtime-mini',
-  instructions:
-    process.env.BYTE_REALTIME_INSTRUCTIONS ||
-    'You are Byte, a friendly cooking and meal logging companion. Help the user describe what they ate with short, practical replies. You may briefly suggest cooking tips. Keep spoken responses concise.',
-  audio: {
-    input: {
-      transcription: { model: 'gpt-4o-mini-transcribe' },
+const DEFAULT_BYTE_INSTRUCTIONS = `You are Byte, an AI nutrition coach that helps users track what they're cooking in real time. Your job is to:
+1. Help users describe their meal as they cook — ask clarifying questions about quantities, cooking methods, and ingredients if they're vague (e.g. 'a little oil' → ask 'roughly how much — a teaspoon or a tablespoon?')
+2. Give real-time feedback on the nutritional balance of what they're describing — flag if something is calorie-dense, high in sodium, or heavy on carbs
+3. Suggest healthier swaps or additions when appropriate, but keep it conversational and non-judgmental
+4. Be brief — the user is cooking, not sitting at a desk. Keep all spoken responses under 2 sentences unless they ask for more.
+5. Acknowledge each ingredient the user mentions and confirm you've noted it.
+
+Do NOT calculate exact calories — that's handled separately. Focus on balance, proportions, and cooking guidance. Sound like a knowledgeable friend in the kitchen, not a nutrition label.`
+
+function buildSessionConfigJson(instructions) {
+  return JSON.stringify({
+    type: 'realtime',
+    model: process.env.OPENAI_REALTIME_MODEL || 'gpt-realtime-mini',
+    instructions,
+    audio: {
+      input: {
+        transcription: { model: 'gpt-4o-mini-transcribe' },
+      },
+      output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' },
     },
-    output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' },
-  },
-})
+  })
+}
 
 function corsOptions() {
   const raw = process.env.ALLOWED_ORIGINS
@@ -42,13 +59,15 @@ function corsOptions() {
 
 const app = express()
 app.use(cors(corsOptions()))
+app.use(express.json({ limit: '128kb' }))
 app.use(express.text({ type: ['application/sdp', 'text/plain'], limit: '256kb' }))
+
+registerMealParse(app, () => OPENAI_API_KEY)
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true })
 })
 
-// Browsers open URLs with GET — this route is POST-only (WebRTC SDP from the app).
 app.get('/realtime/session', (_req, res) => {
   res.type('text/plain').send(
     'byte-realtime-proxy: this URL is for POST only (SDP offer body). ' +
@@ -68,9 +87,17 @@ app.post('/realtime/session', async (req, res) => {
     return
   }
 
+  const baseInstructions = process.env.BYTE_REALTIME_INSTRUCTIONS || DEFAULT_BYTE_INSTRUCTIONS
+  const goalsHeader = req.get('X-Byte-Goals')?.trim()
+  const instructions = goalsHeader
+    ? `${baseInstructions}\n\n${goalsHeader}`
+    : baseInstructions
+
+  const sessionJson = buildSessionConfigJson(instructions)
+
   const fd = new FormData()
   fd.set('sdp', sdpOffer)
-  fd.set('session', sessionConfig)
+  fd.set('session', sessionJson)
 
   try {
     const r = await fetch('https://api.openai.com/v1/realtime/calls', {
@@ -98,4 +125,5 @@ app.post('/realtime/session', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`byte-realtime-proxy listening on http://localhost:${PORT}`)
   console.log(`  POST http://localhost:${PORT}/realtime/session`)
+  console.log(`  POST http://localhost:${PORT}/meal-parse`)
 })

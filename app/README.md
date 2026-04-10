@@ -6,7 +6,7 @@ This template provides a minimal setup to get React working in Vite with HMR and
 
 For **AI voice** in the app, run the small server in [`../realtime-proxy`](../realtime-proxy) (`npm start` there) and put your OpenAI key in that terminal only—not in the app.
 
-In **`app/.env`**, `VITE_REALTIME_SESSION_URL=/realtime/session` is the usual local setup. For production, use your real HTTPS URL (see [`docs/REALTIME_SESSION_API.md`](./docs/REALTIME_SESSION_API.md)).
+In **`app/.env`**, `VITE_REALTIME_SESSION_URL=/realtime/session` and `VITE_MEAL_PARSE_URL=/meal-parse` match the dev proxy to **`realtime-proxy`** on port 5050. For production, use your real HTTPS URLs (see [`docs/REALTIME_SESSION_API.md`](./docs/REALTIME_SESSION_API.md) and [`docs/MEAL_PARSE_API.md`](./docs/MEAL_PARSE_API.md)).
 
 Currently, two official plugins are available:
 

@@ -1,6 +1,7 @@
 import { Mic, Target, TrendingUp, Utensils, User } from 'lucide-react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/components/ui/utils'
+import { useVoiceEntry } from '@/context/VoiceEntryContext'
 
 const navBtn = (active: boolean) =>
   cn(
@@ -11,6 +12,7 @@ const navBtn = (active: boolean) =>
 export function BottomNav() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const { primeMic } = useVoiceEntry()
   const voiceActive = pathname === '/voice'
 
   return (
@@ -32,7 +34,10 @@ export function BottomNav() {
           type="button"
           aria-label="Log meal with voice"
           aria-current={voiceActive ? 'page' : undefined}
-          onClick={() => navigate('/voice?capture=1')}
+          onClick={async () => {
+            await primeMic()
+            navigate('/voice?capture=1', { state: { autoStartVoice: true } })
+          }}
           className={cn(navBtn(voiceActive))}
         >
           <Mic
