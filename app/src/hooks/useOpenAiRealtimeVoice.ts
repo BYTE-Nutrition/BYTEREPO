@@ -199,11 +199,15 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
       if (!sdpResponse.ok) {
         let detail = sdpResponse.statusText
         try {
-          const j = (await sdpResponse.json()) as { error?: string }
-          if (j?.error) detail = j.error
+          const rawText = await sdpResponse.text()
+          try {
+            const j = JSON.parse(rawText) as { error?: string }
+            if (j?.error) detail = j.error
+          } catch {
+            if (rawText) detail = rawText.slice(0, 200)
+          }
         } catch {
-          const t = await sdpResponse.text()
-          if (t) detail = t.slice(0, 200)
+          // couldn't read body
         }
         throw new Error(detail || 'Session request failed')
       }
