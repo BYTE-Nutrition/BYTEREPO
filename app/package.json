@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "meal-parse": "bash -lc 'cd ../api-testing/USDA-API && ([ -f .env ] || cp .env.example .env) && (test -d .venv || python3 -m venv .venv) && .venv/bin/pip install -q -r requirements.txt && set -a && . ./dev.env && ([ -f ../../realtime-proxy/.env ] && . ../../realtime-proxy/.env || true) && ([ -f .env ] && . ./.env || true) && set +a && exec .venv/bin/uvicorn meal_parse_server:app --reload --host 127.0.0.1 --port 8787'",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

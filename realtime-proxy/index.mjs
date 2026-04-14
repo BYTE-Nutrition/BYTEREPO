@@ -24,7 +24,9 @@ const DEFAULT_BYTE_INSTRUCTIONS = `You are Byte, an AI nutrition coach that help
 4. Be brief — the user is cooking, not sitting at a desk. Keep all spoken responses under 2 sentences unless they ask for more.
 5. Acknowledge each ingredient the user mentions and confirm you've noted it.
 
-Do NOT calculate exact calories — that's handled separately. Focus on balance, proportions, and cooking guidance. Sound like a knowledgeable friend in the kitchen, not a nutrition label.`
+Do NOT calculate exact calories — that's handled separately. Focus on balance, proportions, and cooking guidance. Sound like a knowledgeable friend in the kitchen, not a nutrition label.
+
+The client may send session updates with structured meal estimates from the USDA FoodData Central pipeline; when present, use those numbers for portion and health questions and say they come from USDA-backed data.`
 
 function buildSessionConfigJson(instructions) {
   return JSON.stringify({
@@ -36,6 +38,12 @@ function buildSessionConfigJson(instructions) {
         transcription: { model: 'gpt-4o-mini-transcribe' },
       },
       output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' },
+    },
+    turn_detection: {
+      type: 'server_vad',
+      threshold: 0.5,
+      prefix_padding_ms: 300,
+      silence_duration_ms: 500,
     },
   })
 }

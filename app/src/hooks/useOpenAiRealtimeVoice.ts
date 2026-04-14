@@ -1,4 +1,8 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+
+import { BYTE_REALTIME_COACH_BASE } from '@/lib/realtimeCoachBase'
+import { buildAssistantMealContextFromLive, mealParsePipelineConfigured } from '@/lib/realtimeMealContext'
+import type { MealItem } from '@/lib/types'
 
 export type RealtimeVoiceStatus = 'idle' | 'connecting' | 'live' | 'error'
 
@@ -12,6 +16,10 @@ export type UseOpenAiRealtimeVoiceOptions = {
   /** Sent as `X-Byte-Goals` when posting SDP (e.g. daily macro targets for the Realtime session). */
   goalsHeader?: string
   onError?: (message: string) => void
+  /** Parsed meal lines (USDA-backed when meal-parse is configured) — pushed into Realtime instructions. */
+  mealLiveItems?: MealItem[]
+  /** Web Speech / textarea transcript when Realtime user transcript is still empty. */
+  coachTranscriptFallback?: string
 }
 
 function connectErrorMessage(error: unknown): string {
@@ -38,12 +46,37 @@ function parseEvent(raw: string): Record<string, unknown> | null {
   }
 }
 
+const MAX_INSTRUCTIONS_CHARS = 12_000
+
+function pushSessionInstructions(dc: RTCDataChannel, instructions: string) {
+  if (dc.readyState !== 'open') return
+  const text =
+    instructions.length > MAX_INSTRUCTIONS_CHARS
+      ? `${instructions.slice(0, MAX_INSTRUCTIONS_CHARS)}\n\n[truncated]`
+      : instructions
+  if (!text.trim()) return
+  dc.send(
+    JSON.stringify({
+      type: 'session.update',
+      session: { instructions: text },
+    }),
+  )
+}
+
 /**
  * OpenAI Realtime over WebRTC: mic + remote audio + `oai-events` data channel.
  * SDP is exchanged via your backend (see app/docs/REALTIME_SESSION_API.md).
  */
 export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
-  const { sessionUrl, audioRef, takePrimedStream, goalsHeader, onError } = options
+  const {
+    sessionUrl,
+    audioRef,
+    takePrimedStream,
+    goalsHeader,
+    onError,
+    mealLiveItems = [],
+    coachTranscriptFallback = '',
+  } = options
   const [status, setStatus] = useState<RealtimeVoiceStatus>('idle')
   const [lastError, setLastError] = useState<string | null>(null)
   const [userTranscript, setUserTranscript] = useState('')
@@ -51,6 +84,7 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
 
   const pcRef = useRef<RTCPeerConnection | null>(null)
+  const dcRef = useRef<RTCDataChannel | null>(null)
   const committedUserRef = useRef('')
   const segmentUserRef = useRef('')
 
@@ -61,6 +95,7 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
     setAssistantSpeaking(false)
     setStatus('idle')
 
+    dcRef.current = null
     const pc = pcRef.current
     pcRef.current = null
     if (pc) {
@@ -80,6 +115,15 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
       el.srcObject = null
     }
   }, [audioRef])
+
+  const assistantInstructions = useMemo(() => {
+    const text = (userTranscript.trim() || coachTranscriptFallback.trim()).trim()
+    const block = buildAssistantMealContextFromLive(mealLiveItems, text, mealParsePipelineConfigured())
+    return `${BYTE_REALTIME_COACH_BASE}\n\n## Structured meal estimates (updates as they cook)\n${block}`
+  }, [coachTranscriptFallback, mealLiveItems, userTranscript])
+
+  const assistantInstructionsRef = useRef('')
+  assistantInstructionsRef.current = assistantInstructions
 
   const applyUserEvent = useCallback((event: Record<string, unknown>) => {
     const type = String(event.type ?? '')
@@ -174,8 +218,12 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
       ms.getTracks().forEach((t) => pc.addTrack(t, ms))
 
       const dc = pc.createDataChannel('oai-events')
+      dcRef.current = dc
       dc.addEventListener('message', (e) => {
         if (typeof e.data === 'string') handleDataMessage(e.data)
+      })
+      dc.addEventListener('open', () => {
+        pushSessionInstructions(dc, assistantInstructionsRef.current)
       })
 
       const offer = await pc.createOffer()
@@ -227,6 +275,16 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
       onError?.(msg)
     }
   }, [audioRef, disconnect, goalsHeader, handleDataMessage, onError, sessionUrl, takePrimedStream])
+
+  useEffect(() => {
+    if (status !== 'live') return
+    const dc = dcRef.current
+    if (!dc) return
+    const t = window.setTimeout(() => {
+      pushSessionInstructions(dc, assistantInstructionsRef.current)
+    }, 450)
+    return () => window.clearTimeout(t)
+  }, [assistantInstructions, status])
 
   useEffect(() => {
     return () => {

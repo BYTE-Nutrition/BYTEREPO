@@ -2,6 +2,10 @@
 
 The Byte app can call your server to turn a **voice transcript** into structured `MealItem` rows. Keep **OpenAI API keys only on the server**; the client uses `VITE_MEAL_PARSE_URL` (full URL to this endpoint, no secrets).
 
+### API-only (strict) mode
+
+Set **`VITE_MEAL_PARSE_STRICT`** to `1`, `true`, or `yes` in the app `.env` (then restart Vite). The client will **not** use the offline `nutrition.ts` keyword list: voice **Review** and meal detail **Add ingredient** require a working `VITE_MEAL_PARSE_URL` and a successful response with at least one item; otherwise the UI shows an error instead of silent fallback.
+
 ## Endpoint
 
 - **Method:** `POST`
@@ -39,7 +43,9 @@ Recommended server-side limits: max transcript length (e.g. 4k chars), rate limi
       "calories": 140,
       "protein": 12,
       "carbs": 1,
-      "fat": 10
+      "fat": 10,
+      "fdcId": 748967,
+      "nutritionSource": "usda"
     }
   ]
 }
@@ -56,8 +62,12 @@ Recommended server-side limits: max transcript length (e.g. 4k chars), rate limi
 | `protein`   | number | yes      | Grams (rounded client-side)                |
 | `carbs`     | number | yes      | Grams                                      |
 | `fat`       | number | yes      | Grams                                      |
+| `fdcId`     | number | no       | USDA FoodData Central id when known      |
+| `nutritionSource` | string | no   | `"usda"` or `"estimate"` when set          |
 
-The client validates this shape. Invalid JSON or wrong types → the app **falls back** to the built-in local parser.
+The client skips individual rows that are missing required fields; HTTP errors still fail the request. With **`VITE_MEAL_PARSE_STRICT`**, there is no local fallback.
+
+When **`items` is an empty array** but the request succeeded, the server may include **`hint`**: a short human-readable reason (e.g. USDA rate limit / missing keys).
 
 ## Error responses
 

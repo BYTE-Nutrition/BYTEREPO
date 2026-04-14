@@ -239,6 +239,33 @@ const FOODS: FoodEntry[] = [
     keys: ['broccoli'],
   },
   {
+    name: 'Green beans',
+    amount: '1 cup',
+    calories: 44,
+    protein: 2,
+    carbs: 10,
+    fat: 0,
+    keys: ['green beans', 'string beans', 'haricots verts'],
+  },
+  {
+    name: 'Lentil soup',
+    amount: '1 cup',
+    calories: 186,
+    protein: 12,
+    carbs: 30,
+    fat: 3,
+    keys: ['lentil soup', 'lentils soup'],
+  },
+  {
+    name: 'Grapes',
+    amount: '1 handful (~15)',
+    calories: 34,
+    protein: 0,
+    carbs: 9,
+    fat: 0,
+    keys: ['grapes', 'handful of grapes', 'red grapes', 'green grapes'],
+  },
+  {
     name: 'Cheddar cheese',
     amount: '28g',
     calories: 113,
@@ -377,6 +404,7 @@ function mealItemFromFood(f: FoodEntry): MealItem {
     protein: f.protein,
     carbs: f.carbs,
     fat: f.fat,
+    nutritionSource: 'estimate',
   }
 }
 
@@ -394,6 +422,7 @@ function fallbackMeal(text: string): MealItem[] {
       protein: Math.round(c * 0.25 / 4),
       carbs: Math.round(c * 0.45 / 4),
       fat: Math.round(c * 0.3 / 9),
+      nutritionSource: 'estimate',
     },
   ]
 }

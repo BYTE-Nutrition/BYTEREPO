@@ -9,13 +9,26 @@ import { useMicLevel } from '@/hooks/useMicLevel'
 import { useOpenAiRealtimeVoice } from '@/hooks/useOpenAiRealtimeVoice'
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
 import { getCookingTips } from '@/lib/cookingTips'
-import { parseMealWithApi, parseMealTranscriptBestEffort } from '@/lib/mealParseApi'
+import {
+  getMealParseUrl,
+  isMealParseStrict,
+  parseMealWithApi,
+  parseMealTranscriptBestEffort,
+} from '@/lib/mealParseApi'
 import { QUICK_SUGGESTIONS, parseMealFromTranscript, sumMealItems } from '@/lib/nutrition'
 import { MEAL_LABELS, MEAL_ORDER, type MealItem, type MealSlot, type VoiceLocationState } from '@/lib/types'
 
 function parseSlot(s: string | null): MealSlot {
   if (s && MEAL_ORDER.includes(s as MealSlot)) return s as MealSlot
   return 'lunch'
+}
+
+/** Heuristic: user named several foods (comma / and / with) but preview may only show one row. */
+function transcriptLooksMultiFood(s: string): boolean {
+  const n = s.toLowerCase().trim()
+  if (n.length < 8) return false
+  const chunks = n.split(/\b(?:and|with|plus)\b|,/).map((p) => p.trim()).filter((p) => p.length > 2)
+  return chunks.length >= 2
 }
 
 export function VoicePage() {
@@ -37,6 +50,8 @@ export function VoicePage() {
     null,
   )
   const [committedTranscript, setCommittedTranscript] = useState('')
+  /** `local` = offline keyword matcher (tiny food list), not USDA meal-parse. */
+  const [previewSource, setPreviewSource] = useState<'api' | 'local' | null>(null)
   const [liveItems, setLiveItems] = useState<MealItem[]>([])
 
   const wantsImmersive =
@@ -62,11 +77,15 @@ export function VoicePage() {
     onError: (msg) => setError(msg),
   })
 
+  const coachTranscriptFallback = speech.displayTranscript || speech.finalText
+
   const realtime = useOpenAiRealtimeVoice({
     sessionUrl: realtimeSessionUrl,
     audioRef: realtimeAudioRef,
     takePrimedStream,
     goalsHeader: realtimeGoalsHeader,
+    mealLiveItems: liveItems,
+    coachTranscriptFallback,
     onError: (msg) => {
       setError(msg)
       setFallbackSpeech(true)
@@ -248,9 +267,21 @@ export function VoicePage() {
       speech.setTranscriptManual(t.trim() || text)
     }
     if (wantsImmersive) exitImmersive()
-    const apiItems = await parseMealWithApi(text)
-    const items =
-      apiItems && apiItems.length > 0 ? apiItems : parseMealFromTranscript(text)
+    if (isMealParseStrict() && !getMealParseUrl()) {
+      setError('API-only mode: set VITE_MEAL_PARSE_URL in .env and restart the dev server.')
+      return
+    }
+    const { items: apiItems, hint } = await parseMealWithApi(text)
+    if (isMealParseStrict() && (!apiItems || apiItems.length === 0)) {
+      setError(
+        hint?.trim() ||
+          'Meal-parse returned nothing or failed (timeout, network, or HTTP error). Check the meal-parse service and try Review again.',
+      )
+      return
+    }
+    const usedApi = Boolean(apiItems?.length)
+    const items = usedApi ? apiItems : parseMealFromTranscript(text)
+    setPreviewSource(usedApi ? 'api' : 'local')
     setPreviewItems(items)
     setStep('confirm')
   }, [exitImmersive, immersiveRealtimeOn, realtime, speech, transcriptForDisplay, wantsImmersive])
@@ -285,6 +316,7 @@ export function VoicePage() {
     speech.stop()
     speech.setTranscriptManual(committedTranscript)
     setPreviewItems(null)
+    setPreviewSource(null)
     setStep('listen')
     setError(null)
   }, [committedTranscript, speech])
@@ -294,9 +326,21 @@ export function VoicePage() {
     [liveItems, transcriptForDisplay],
   )
 
+  const previewTotals = useMemo(
+    () => (previewItems?.length ? sumMealItems(previewItems) : null),
+    [previewItems],
+  )
+
+  const previewMultiFoodMismatch = Boolean(
+    previewSource === 'local' &&
+      previewItems?.length === 1 &&
+      committedTranscript &&
+      transcriptLooksMultiFood(committedTranscript),
+  )
+
   return (
     <div className="min-h-full bg-[#f7f6f3] text-stone-800">
-      <audio ref={realtimeAudioRef} className="hidden" playsInline aria-hidden />
+      <audio ref={realtimeAudioRef} className="hidden" playsInline autoPlay aria-hidden />
       {showImmersive && (
         <VoiceImmersiveCapture
           slot={slot}
@@ -415,25 +459,70 @@ export function VoicePage() {
               <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Almost there</p>
               <h3 className="text-[1.25rem] font-medium tracking-tight text-stone-900">Does this look right?</h3>
               <p className="mt-3 text-sm leading-relaxed text-stone-500">
-                Estimates from your words—you can go back and adjust anytime.
+                {previewSource === 'local'
+                  ? 'These numbers use Byte’s offline keyword list—not the full USDA meal parser—unless meal-parse is connected and succeeds.'
+                  : previewItems.some((i) => i.fdcId || i.nutritionSource === 'usda')
+                    ? 'Calories scale to each portion below. USDA-backed lines use official reference servings—if the portion is wrong, edit your description to be more specific (cups, bowls, or “whole can”).'
+                    : 'Estimates from your words—you can go back and adjust anytime.'}
               </p>
+              {previewSource === 'local' ? (
+                <div className="mt-4 rounded-xl border border-amber-200/90 bg-amber-50/95 px-4 py-3 text-[13px] leading-relaxed text-amber-950">
+                  <p className="font-medium">USDA meal-parse did not supply this breakdown</p>
+                  <p className="mt-1 text-amber-950/90">
+                    {getMealParseUrl()
+                      ? 'The server may be down, timed out, or returned no items—so only foods that match a short built-in list appear.'
+                      : 'Point the app at your meal-parse server (VITE_MEAL_PARSE_URL, e.g. /meal-parse via Vite proxy) so every ingredient can be extracted and scaled.'}
+                  </p>
+                  {previewMultiFoodMismatch ? (
+                    <p className="mt-2 font-medium text-amber-950">
+                      Your description sounds like several foods, but only one line matched locally. Edit the text or fix meal-parse, then tap Review again.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              {committedTranscript ? (
+                <p className="mt-3 rounded-xl border border-stone-200/80 bg-white/60 px-4 py-3 text-[13px] leading-relaxed text-stone-600">
+                  <span className="font-medium text-stone-500">You described </span>
+                  <span className="text-stone-800">&ldquo;{committedTranscript}&rdquo;</span>
+                </p>
+              ) : null}
             </div>
             <ul className="divide-y divide-stone-200/80 border-y border-stone-200/80">
-              {previewItems.map((i) => (
-                <li key={i.id} className="py-3.5 text-[15px] text-stone-800">
-                  <span className="font-medium">{i.name}</span>
-                  <span className="text-stone-500"> — {i.calories} kcal</span>
-                </li>
-              ))}
+              {previewItems.map((i) => {
+                const usdaBacked = i.nutritionSource === 'usda' || (typeof i.fdcId === 'number' && i.fdcId > 0)
+                return (
+                  <li key={i.id} className="space-y-1 py-3.5 text-[15px] text-stone-800">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+                      <span className="min-w-0 font-medium leading-snug">{i.name}</span>
+                      <span className="shrink-0 tabular-nums text-stone-500">{i.calories} kcal</span>
+                    </div>
+                    {i.amount ? <p className="text-[13px] leading-snug text-stone-500">{i.amount}</p> : null}
+                    {usdaBacked && typeof i.fdcId === 'number' && i.fdcId > 0 ? (
+                      <p className="text-[12px] text-stone-400">
+                        <a
+                          href={`https://fdc.nal.usda.gov/food-details/${i.fdcId}/nutrients`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-stone-600 underline decoration-stone-300 underline-offset-2 hover:text-stone-800"
+                        >
+                          USDA FoodData Central
+                        </a>
+                        <span className="text-stone-400"> · reference #{i.fdcId}</span>
+                      </p>
+                    ) : usdaBacked ? (
+                      <p className="text-[12px] text-stone-400">USDA-backed estimate</p>
+                    ) : null}
+                  </li>
+                )
+              })}
             </ul>
             <div className="border-b border-stone-200/80 py-6 text-center">
               <p className="text-3xl font-light tabular-nums text-stone-900">
-                {sumMealItems(previewItems).calories}
+                {previewTotals?.calories ?? 0}
+                <span className="ml-2 text-base font-normal tracking-normal text-stone-500">kcal total</span>
               </p>
-              <p className="mt-1 text-sm text-stone-500">kcal total</p>
               <p className="mt-4 text-xs tabular-nums text-stone-400">
-                P {sumMealItems(previewItems).protein}g · C {sumMealItems(previewItems).carbs}g · F{' '}
-                {sumMealItems(previewItems).fat}g
+                P {previewTotals?.protein ?? 0}g · C {previewTotals?.carbs ?? 0}g · F {previewTotals?.fat ?? 0}g
               </p>
             </div>
             <div className="space-y-3 pt-2">

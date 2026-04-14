@@ -1,5 +1,7 @@
 export type MealSlot = 'breakfast' | 'lunch' | 'snack' | 'dinner'
 
+export type MealNutritionSource = 'usda' | 'estimate'
+
 export interface MealItem {
   id: string
   name: string
@@ -9,6 +11,10 @@ export interface MealItem {
   protein: number
   carbs: number
   fat: number
+  /** USDA FoodData Central `fdcId` when this line was resolved from the FDC API. */
+  fdcId?: number
+  /** Whether macros came from USDA-backed meal-parse vs local heuristics. */
+  nutritionSource?: MealNutritionSource
 }
 
 export interface MealLog {

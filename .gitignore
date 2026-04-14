@@ -1,4 +1,14 @@
 .cursor/
+api-testing/USDA-API/.venv/
+api-testing/USDA-API/.env
+api-testing/USDA-API/.env.*
+!api-testing/USDA-API/.env.example
+api-testing/USDA-API/__pycache__/
+
+# USDA bulk datasets & large API dumps (download locally; keep repo small)
+api-testing/USDA Data/
+api-testing/USDA-API/chicken_breast_output.json
+api-testing/USDA-API/chicken_breast_fdcid_output.json
 node_modules/
 .expo/
 **/.expo/

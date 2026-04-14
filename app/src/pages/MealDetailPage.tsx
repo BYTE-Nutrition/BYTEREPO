@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ChevronLeft, Clock, Edit2, Plus, Trash2, X } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AppScreenHeader } from '@/components/AppScreenHeader'
 import { useByte } from '@/context/useByte'
+import { getMealParseUrl, isMealParseStrict, parseMealWithApi } from '@/lib/mealParseApi'
 import { parseMealFromTranscript } from '@/lib/nutrition'
 import { MEAL_LABELS, MEAL_ORDER, type MealItem, type MealSlot } from '@/lib/types'
 
@@ -25,8 +26,17 @@ export function MealDetailPage() {
   const { slot: slotParam } = useParams()
   const [addSheetOpen, setAddSheetOpen] = useState(false)
   const [addDraft, setAddDraft] = useState('')
+  const [addItemError, setAddItemError] = useState<string | null>(null)
+  const [addItemBusy, setAddItemBusy] = useState(false)
   const slot = (MEAL_ORDER.includes(slotParam as MealSlot) ? slotParam : null) as MealSlot | null
   const { day, removeMealItem, addMealItem, clearMeal } = useByte()
+
+  useEffect(() => {
+    if (!addSheetOpen) {
+      setAddItemError(null)
+      setAddItemBusy(false)
+    }
+  }, [addSheetOpen])
 
   if (!slot) {
     return (
@@ -79,9 +89,35 @@ export function MealDetailPage() {
   const prep = new Date(meal.prepStarted)
   const done = new Date(meal.mealCompleted)
 
-  const handleSubmitAddItem = () => {
+  const handleSubmitAddItem = useCallback(async () => {
     const raw = addDraft.trim()
     if (!raw) return
+    setAddItemError(null)
+    if (isMealParseStrict()) {
+      if (!getMealParseUrl()) {
+        setAddItemError('API-only mode: set VITE_MEAL_PARSE_URL, then restart the dev server.')
+        return
+      }
+      setAddItemBusy(true)
+      try {
+        const { items: parsed, hint } = await parseMealWithApi(raw)
+        if (!parsed?.length) {
+          setAddItemError(
+            hint?.trim() ||
+              'Meal-parse returned no items. Check USDA_API_KEY / OPENAI_API_KEY on the server, or try again.',
+          )
+          return
+        }
+        for (const p of parsed) {
+          addMealItem(slot, { ...p, id: crypto.randomUUID() })
+        }
+        setAddDraft('')
+        setAddSheetOpen(false)
+      } finally {
+        setAddItemBusy(false)
+      }
+      return
+    }
     const parsed = parseMealFromTranscript(raw)
     if (parsed.length > 0) {
       for (const p of parsed) {
@@ -101,7 +137,7 @@ export function MealDetailPage() {
     }
     setAddDraft('')
     setAddSheetOpen(false)
-  }
+  }, [addDraft, addMealItem, slot])
 
   return (
     <div className="min-h-full bg-[#f7f6f3] text-stone-800">
@@ -159,6 +195,7 @@ export function MealDetailPage() {
             type="button"
             onClick={() => {
               setAddDraft('')
+              setAddItemError(null)
               setAddSheetOpen(true)
             }}
             className="text-sm font-medium text-stone-800 underline underline-offset-4"
@@ -177,6 +214,20 @@ export function MealDetailPage() {
                   <p className="mt-2 text-xs tabular-nums text-stone-400">
                     {ingredient.calories} kcal · {ingredient.protein}P · {ingredient.carbs}C · {ingredient.fat}F
                   </p>
+                  {ingredient.fdcId != null && (
+                    <p className="mt-1 text-[11px] text-stone-400">
+                      USDA FDC{' '}
+                      <a
+                        href={`https://fdc.nal.usda.gov/fdc-app.html#/food-details/${ingredient.fdcId}/nutrients`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-stone-600 underline underline-offset-2"
+                      >
+                        {ingredient.fdcId}
+                      </a>
+                      {ingredient.nutritionSource === 'usda' ? ' · matched from database' : null}
+                    </p>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -252,7 +303,9 @@ export function MealDetailPage() {
               </button>
             </div>
             <p className="mb-3 text-sm leading-relaxed text-stone-500">
-              Describe foods in plain language—same as when you talk to Byte.
+              {isMealParseStrict()
+                ? 'Uses meal-parse only—describe foods like on the voice log screen.'
+                : 'Describe foods in plain language—same as when you talk to Byte.'}
             </p>
             <textarea
               value={addDraft}
@@ -261,6 +314,9 @@ export function MealDetailPage() {
               placeholder='e.g. "1 apple" or "yogurt and berries"'
               className="mb-4 min-h-28 w-full rounded-xl border border-stone-200/80 bg-white/90 p-4 text-[15px] text-stone-900 placeholder:text-stone-400 focus:border-stone-300 focus:outline-none focus:ring-1 focus:ring-stone-400/25"
             />
+            {addItemError ? (
+              <p className="mb-3 text-sm leading-relaxed text-red-600/90">{addItemError}</p>
+            ) : null}
             <div className="flex gap-3">
               <button
                 type="button"
@@ -271,12 +327,12 @@ export function MealDetailPage() {
               </button>
               <button
                 type="button"
-                onClick={handleSubmitAddItem}
-                disabled={!addDraft.trim()}
+                onClick={() => void handleSubmitAddItem()}
+                disabled={!addDraft.trim() || addItemBusy}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-stone-900 py-3.5 text-sm font-medium text-[#f5e6c8] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Plus className="h-4 w-4" aria-hidden />
-                Add
+                {addItemBusy ? 'Adding…' : 'Add'}
               </button>
             </div>
           </div>

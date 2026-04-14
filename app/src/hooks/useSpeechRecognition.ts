@@ -105,10 +105,9 @@ export function useSpeechRecognition(options: {
   const displayTranscript = [finalText, interim].filter(Boolean).join(finalText && interim ? ' ' : '')
 
   const setTranscriptManual = useCallback((text: string) => {
-    const t = text
-    bufferRef.current = t
-    finalTextRef.current = t.trim()
-    setFinalText(t.trim())
+    bufferRef.current = text
+    finalTextRef.current = text
+    setFinalText(text)
     setInterim('')
   }, [])
 
