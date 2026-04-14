@@ -6,13 +6,23 @@ to get { "items", "trace" } showing OpenAI lines, USDA resolution, fallbacks, an
 
 Run: uvicorn meal_parse_server:app --reload --port 8787
 App: VITE_MEAL_PARSE_URL=/meal-parse
+
+This module loads `dev.env` then `.env` from this directory via python-dotenv so OPENAI_API_KEY
+and USDA_API_KEY work even when uvicorn is started without the npm shell sourcing those files.
 """
 
 from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 from typing import Any
+
+from dotenv import load_dotenv
+
+_env_dir = Path(__file__).resolve().parent
+load_dotenv(_env_dir / "dev.env")
+load_dotenv(_env_dir / ".env", override=True)
 
 import requests
 from fastapi import FastAPI, HTTPException
@@ -31,6 +41,10 @@ from openai_extract import ExtractedLine, extract_meal_structured
 from usda_api import USDAAPI
 
 logger = logging.getLogger(__name__)
+logger.info(
+    "Meal-parse env: dotenv loaded from %s (dev.env + .env; .env overrides)",
+    _env_dir,
+)
 
 app = FastAPI(title="Byte USDA meal-parse")
 app.add_middleware(
@@ -85,12 +99,15 @@ def _process_openai_lines(
     return items
 
 
-def _empty_meal_parse_hint(*, openai_lines: int) -> str:
+def _empty_meal_parse_hint(*, openai_lines: int, openai_error: str | None = None) -> str:
     parts: list[str] = []
     if not os.getenv("OPENAI_API_KEY", "").strip():
         parts.append("Set OPENAI_API_KEY on the meal-parse server for reliable multi-item parsing.")
     elif openai_lines == 0:
-        parts.append("OpenAI returned no food lines for this transcript.")
+        if openai_error:
+            parts.append(f"OpenAI extraction failed: {openai_error[:380]}")
+        else:
+            parts.append("OpenAI returned no food lines for this transcript.")
     else:
         parts.append(
             "OpenAI returned lines but every USDA lookup failed—check USDA_API_KEY "
@@ -110,12 +127,14 @@ def meal_parse(body: TranscriptBody) -> dict[str, Any]:
     api = USDAAPI(key)
 
     openai_line_count = 0
+    openai_error: str | None = None
     if os.getenv("OPENAI_API_KEY", "").strip():
         try:
             lines = extract_meal_structured(raw)
         except Exception as e:
             logger.warning("OpenAI extract failed: %s", e)
             lines = []
+            openai_error = str(e)
 
         openai_line_count = len(lines)
         if lines:
@@ -131,7 +150,10 @@ def meal_parse(body: TranscriptBody) -> dict[str, Any]:
     if legacy:
         return {"items": legacy}
     if raw:
-        return {"items": [], "hint": _empty_meal_parse_hint(openai_lines=openai_line_count)}
+        return {
+            "items": [],
+            "hint": _empty_meal_parse_hint(openai_lines=openai_line_count, openai_error=openai_error),
+        }
     return {"items": []}
 
 
