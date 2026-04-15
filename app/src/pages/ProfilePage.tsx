@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { AppScreenHeader } from '@/components/AppScreenHeader'
+import { useAuth } from '@/context/AuthContext'
 import { useByte } from '@/context/useByte'
 import { GOAL_PACE_OPTIONS, USER_GOAL_OPTIONS } from '@/lib/goalsFromProfile'
 import type { GoalPace, UserGoal, UserSex } from '@/lib/types'
@@ -11,6 +12,7 @@ const sectionTitle = 'text-[11px] font-medium uppercase tracking-[0.18em] text-s
 
 export function ProfilePage() {
   const navigate = useNavigate()
+  const { signOut } = useAuth()
   const {
     state,
     goals,
@@ -236,6 +238,13 @@ export function ProfilePage() {
             className="w-full rounded-2xl border border-stone-300/80 bg-white/60 py-3.5 text-[15px] font-medium text-stone-700"
           >
             Clear all data
+          </button>
+          <button
+            type="button"
+            onClick={() => signOut()}
+            className="w-full rounded-2xl border border-stone-200/60 bg-white/40 py-3.5 text-[15px] font-medium text-stone-400"
+          >
+            Sign out
           </button>
         </section>
       </div>
