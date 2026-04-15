@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { AppState, Goals, MealItem, MealLog, MealSlot, UserProfile } from '@/lib/types'
 import { totalsFromMealItems } from '@/lib/aggregate'
 import { computeGoalsFromProfile } from '@/lib/goalsFromProfile'
@@ -8,18 +8,37 @@ import {
   emptyDay,
   ensureDay,
   loadState,
+  loadStateFromCloud,
   saveState,
+  saveStateToCloud,
 } from '@/lib/storage'
 import { formatRange, planWeekNumber, todayKey } from '@/lib/dates'
 import { ByteContext, type ByteContextValue } from './byte-context'
+import { useAuth } from './AuthContext'
 
 export function ByteProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
   const [state, setState] = useState<AppState>(() => loadState())
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tk = todayKey()
 
+  // When a user signs in, pull their saved state from Supabase.
+  useEffect(() => {
+    if (!user) return
+    loadStateFromCloud(user.id).then((cloudState) => {
+      if (cloudState) setState(cloudState)
+    })
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save to localStorage immediately; debounce cloud writes by 1.5 s.
   useEffect(() => {
     saveState(state)
-  }, [state])
+    if (!user) return
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => {
+      saveStateToCloud(user.id, state)
+    }, 1500)
+  }, [state]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const day = useMemo(() => state.days[tk] ?? emptyDay(), [state.days, tk])
 

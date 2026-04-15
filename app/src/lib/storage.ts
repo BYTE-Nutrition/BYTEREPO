@@ -1,3 +1,4 @@
+import { supabase } from './supabase'
 import type {
   AppState,
   DayData,
@@ -265,4 +266,32 @@ export function ensureDay(state: AppState, key: string): DayData {
     state.days[key] = emptyDay()
   }
   return state.days[key]
+}
+
+// ---------------------------------------------------------------------------
+// Supabase cloud sync (table: user_states)
+// ---------------------------------------------------------------------------
+
+export async function loadStateFromCloud(userId: string): Promise<AppState | null> {
+  try {
+    const { data, error } = await supabase
+      .from('user_states')
+      .select('state')
+      .eq('id', userId)
+      .single()
+    if (error || !data) return null
+    return migrateParsed(data.state as AppState)
+  } catch {
+    return null
+  }
+}
+
+export async function saveStateToCloud(userId: string, state: AppState): Promise<void> {
+  try {
+    await supabase
+      .from('user_states')
+      .upsert({ id: userId, state, updated_at: new Date().toISOString() })
+  } catch {
+    /* non-fatal — localStorage still has the data */
+  }
 }
