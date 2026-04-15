@@ -1,4 +1,4 @@
-"""Using OpenAI to turn a free-text meal transcript into structured foods + quantities."""
+"""Use OpenAI to turn a free-text meal transcript into structured foods + quantities."""
 
 from __future__ import annotations
 
