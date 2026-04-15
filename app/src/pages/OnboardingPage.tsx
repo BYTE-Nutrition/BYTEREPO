@@ -3,6 +3,7 @@ import { ArrowRight, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { ByteLogo } from '@/components/ByteLogo'
 import { useByte } from '@/context/useByte'
+import { analytics } from '@/lib/analytics'
 import {
   GOAL_PACE_OPTIONS,
   USER_GOAL_OPTIONS,
@@ -104,6 +105,7 @@ export function OnboardingPage() {
       goal,
       goalPace,
     })
+    analytics.track('onboarding_completed', { goal, goalPace })
     navigate('/home', { replace: true })
   }
 

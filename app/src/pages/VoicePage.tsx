@@ -8,6 +8,7 @@ import { useVoiceEntry } from '@/context/VoiceEntryContext'
 import { useMicLevel } from '@/hooks/useMicLevel'
 import { useOpenAiRealtimeVoice } from '@/hooks/useOpenAiRealtimeVoice'
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
+import { analytics } from '@/lib/analytics'
 import { getCookingTips } from '@/lib/cookingTips'
 import { parseMealWithApi, parseMealTranscriptBestEffort } from '@/lib/mealParseApi'
 import { QUICK_SUGGESTIONS, parseMealFromTranscript, sumMealItems } from '@/lib/nutrition'
@@ -139,6 +140,7 @@ export function VoicePage() {
 
   const beginImmersiveListening = useCallback(() => {
     setError(null)
+    analytics.track('voice_session_started', { mode: immersiveRealtimeOn ? 'realtime' : 'speech' })
     if (immersiveRealtimeOn) {
       speech.setTranscriptManual('')
       void realtime.connect()
@@ -273,6 +275,7 @@ export function VoicePage() {
       mealCompleted: done.toISOString(),
       voiceTranscript: committedTranscript,
     })
+    analytics.track('meal_logged', { slot, item_count: previewItems.length, calories: t.calories })
     navigate('/home')
   }, [committedTranscript, logMeal, navigate, previewItems, slot])
 
