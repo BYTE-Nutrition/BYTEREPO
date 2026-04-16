@@ -1,5 +1,8 @@
-# Expo static export writes to dist/ (index.html + _expo/). Publishing the repo
-# root or another folder leaves script URLs broken → blank page in the browser.
+# Main UI: Vite + React Router in app/. SPA routing uses app/public/_redirects → dist/_redirects.
 [build]
-  command = "npm run build"
+  base = "app"
+  command = "npm ci && npm run build"
   publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
