@@ -3,21 +3,30 @@ import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { BottomNav } from '@/components/BottomNav'
 import { useByte } from '@/context/useByte'
+import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/components/ui/utils'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { state } = useByte()
+  const { session, loading } = useAuth()
   const isLanding = pathname === '/'
   const isOnboarding = pathname === '/onboarding'
-  const hideNav = isLanding || isOnboarding
+  const isSignIn = pathname === '/signin'
+  const hideNav = isLanding || isOnboarding || isSignIn
   /** Main app: centered phone-sized column on desktop; `transform` traps `position:fixed` (nav, immersive voice). */
-  const phoneFrame = !isLanding && !isOnboarding
+  const phoneFrame = !isLanding && !isOnboarding && !isSignIn
+
+  // Redirect to sign-in if not authenticated (after initial session check).
+  useEffect(() => {
+    if (loading) return
+    if (!session && !isSignIn) navigate('/signin', { replace: true })
+  }, [session, loading, isSignIn, navigate])
 
   useEffect(() => {
     if (state.onboardingComplete) return
-    const allowed = pathname === '/' || pathname === '/onboarding'
+    const allowed = pathname === '/' || pathname === '/onboarding' || pathname === '/signin'
     if (!allowed) navigate('/onboarding', { replace: true })
   }, [state.onboardingComplete, pathname, navigate])
 
