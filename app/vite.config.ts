@@ -15,10 +15,7 @@ export default defineConfig({
         target: 'http://localhost:5050',
         changeOrigin: true,
       },
-      '/meal-parse': {
-        target: 'http://localhost:5050',
-        changeOrigin: true,
-      },
+      // Local meal-parse server (see package.json `meal-parse` script, port 8787).
       '/meal-parse': {
         target: 'http://127.0.0.1:8787',
         changeOrigin: true,
@@ -31,10 +28,7 @@ export default defineConfig({
         target: 'http://localhost:5050',
         changeOrigin: true,
       },
-      '/meal-parse': {
-        target: 'http://localhost:5050',
-        changeOrigin: true,
-      },
+      // Local meal-parse server (see package.json `meal-parse` script, port 8787).
       '/meal-parse': {
         target: 'http://127.0.0.1:8787',
         changeOrigin: true,

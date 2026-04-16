@@ -1,5 +1,11 @@
-# Expo static export writes to dist/ (index.html + _expo/). Publishing the repo
-# root or another folder leaves script URLs broken → blank page in the browser.
+# Main UI: Vite + React Router in app/. Netlify installs and builds from that folder.
 [build]
-  command = "npm run build"
+  base = "app"
+  command = "npm ci && npm run build"
   publish = "dist"
+
+# Deep links (e.g. /home, /meals/...) must serve SPA shell; real files still win (shadowing).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

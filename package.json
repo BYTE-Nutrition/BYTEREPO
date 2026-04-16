@@ -3,7 +3,6 @@
   "private": true,
   "description": "Monorepo-style layout: install and run from app/, website/, or fifi-cursor-app/",
   "scripts": {
-    "build": "expo export --platform web",
     "dev:app": "npm run dev --prefix app",
     "meal-parse:app": "npm run meal-parse --prefix app",
     "dev:website": "npm run dev --prefix website",
