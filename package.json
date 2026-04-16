@@ -12,7 +12,9 @@
     "build:fifi": "npm run build --prefix fifi-cursor-app"
   },
   "dependencies": {
-    "expo": "^55.0.9"
+    "expo": "^55.0.15",
+    "react-dom": "19.2.0",
+    "react-native-web": "^0.21.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.10",
