@@ -1,0 +1,5 @@
+# Expo static export writes to dist/ (index.html + _expo/). Publishing the repo
+# root or another folder leaves script URLs broken → blank page in the browser.
+[build]
+  command = "npm run build"
+  publish = "dist"
