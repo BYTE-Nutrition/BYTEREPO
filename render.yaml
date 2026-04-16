@@ -1,0 +1,35 @@
+# Render Blueprint: free-tier web service for USDA meal-parse (FastAPI).
+# https://render.com/docs/infrastructure-as-code
+#
+# After you connect this repo in Render → New → Blueprint, set secret env vars
+# in the dashboard when prompted (USDA_API_KEY, OPENAI_API_KEY).
+#
+# Netlify: set VITE_MEAL_PARSE_URL to your Render URL + path, e.g.
+#   https://byte-meal-parse.onrender.com/meal-parse
+# then redeploy the static site so Vite bakes the value in.
+
+version: "1"
+
+services:
+  - type: web
+    name: byte-meal-parse
+    runtime: python
+    plan: free
+    region: oregon
+    rootDir: api-testing/USDA-API
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn meal_parse_server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /openapi.json
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      # Do not enable /meal-parse/debug on the public internet.
+      - key: MEAL_PARSE_DEBUG
+        value: "0"
+      - key: USDA_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      # Comma-separated origins, or * (default in app CORS if unset). Prefer your Netlify URL.
+      - key: MEAL_PARSE_CORS_ORIGINS
+        sync: false
