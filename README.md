@@ -1,6 +1,6 @@
 # BYTEREPO
 
-Monorepo for **Byte** (AI nutrition / voice meal logging) and related frontends.
+Monorepo for **Byte** (AI nutrition / voice meal logging) and its related frontends.
 
 ## Project structure
 
