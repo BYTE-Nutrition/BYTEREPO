@@ -1,11 +1,8 @@
-# Main UI: Vite + React Router in app/. Netlify installs and builds from that folder.
+# Main UI: Vite + React Router in app/. SPA routing uses app/public/_redirects → dist/_redirects.
 [build]
   base = "app"
   command = "npm ci && npm run build"
   publish = "dist"
 
-# Deep links (e.g. /home, /meals/...) must serve SPA shell; real files still win (shadowing).
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[build.environment]
+  NODE_VERSION = "22"
