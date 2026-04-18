@@ -67,7 +67,7 @@ See **`realtime-proxy/.env.example`** and **`app/.env.example`**.
 
 ## Deployment
 
-- **Netlify (recommended in this repo):** Link the GitHub repo; **`netlify.toml`** sets **`base = "app"`**, build **`npm ci && npm run build`**, publish **`dist`**. Functions live in **`netlify/functions/`**; **`app/public/_redirects`** maps **`/realtime/session`** and **`/meal-parse`** to them before the SPA fallback.
+- **Netlify (recommended in this repo):** Link the GitHub repo; **`netlify.toml`** sets **`base = "app"`**, build **`npm ci && npm run build`**, publish **`dist`**. Functions live in **`netlify/functions/`**; **`app/public/_redirects`** maps **`/realtime/session`** and **`/meal-parse`** to them before the SPA fallback. **Step-by-step env + verification:** [`docs/NETLIFY_DEPLOY.md`](docs/NETLIFY_DEPLOY.md).
 - **Vercel:** Root **`vercel.json`** can build `app/` and expose **`api/**/*.js`** instead of Netlify functions.
 - **Backend only (`realtime-proxy/`)** → **Railway** or **Render** if you prefer not to use serverless: set **`OPENAI_API_KEY`**, expose HTTPS, then set **`VITE_REALTIME_SESSION_URL`** / **`VITE_MEAL_PARSE_URL`** to that host.
 
