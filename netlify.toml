@@ -1,4 +1,5 @@
 # Main UI: Vite + React Router in app/. SPA routing uses app/public/_redirects → dist/_redirects.
+# OpenAI Realtime + meal-parse live in netlify/functions/ (repo root); paths /realtime/session and /meal-parse.
 [build]
   base = "app"
   command = "npm ci && npm run build"
@@ -6,3 +7,7 @@
 
 [build.environment]
   NODE_VERSION = "22"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"

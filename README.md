@@ -6,8 +6,9 @@ Monorepo for **Byte** (AI nutrition / voice meal logging) and its related fronte
 
 | Directory | Purpose |
 |-----------|---------|
-| **`app/`** | Main Byte web app (React + Vite + TypeScript). Deploy this folder to **Vercel**. |
-| **`realtime-proxy/`** | Node server: OpenAI **Realtime** SDP relay + **`/meal-parse`** (Chat Completions). Deploy to **Railway**, **Render**, **Fly.io**, or similar — **not** Vercel serverless unless you adapt it. |
+| **`app/`** | Main Byte web app (React + Vite + TypeScript). Deploy with **Netlify** (root `netlify.toml`, `base = app`) or **Vercel**. |
+| **`netlify/functions/`** | **Netlify serverless:** `realtime-session` + `meal-parse` — same OpenAI behavior as `api/` on Vercel. Set **`OPENAI_API_KEY`** in Netlify site env. |
+| **`realtime-proxy/`** | Optional long-running Node server (SDP relay + meal-parse) for **local dev** or **Railway/Render** if you do not use Netlify functions. |
 | **`website/`** | Separate marketing / site project (if used). |
 | **`fifi-cursor-app/`** | Additional app / experiment. |
 
@@ -41,14 +42,16 @@ Vite dev server proxies **`/realtime/session`** and **`/meal-parse`** to **`http
 
 ### `app/` (client — only non-secret URLs)
 
-Set in **Vercel** project settings (or `app/.env` locally). **Never** put `OPENAI_API_KEY` here; `VITE_*` is embedded in the browser bundle.
+Set in **Netlify** / **Vercel** project settings (or `app/.env` locally). **Never** put `OPENAI_API_KEY` in `VITE_*`; those values are embedded in the browser bundle.
 
 | Variable | Example (local) | Description |
 |----------|-----------------|-------------|
 | `VITE_REALTIME_SESSION_URL` | `/realtime/session` or `https://your-api.example.com/realtime/session` | POST endpoint for WebRTC SDP relay. |
 | `VITE_MEAL_PARSE_URL` | `/meal-parse` or `https://your-api.example.com/meal-parse` | POST JSON `{ transcript }` → `{ items }`. |
 
-Production: use **HTTPS** URLs pointing at your deployed **`realtime-proxy`**.
+Production (**Netlify**): use path-only URLs **`/realtime/session`** and **`/meal-parse`** (rewrites in `app/public/_redirects` → `netlify/functions/`). Add **`OPENAI_API_KEY`** (and optional `OPENAI_MEAL_PARSE_MODEL`, `OPENAI_REALTIME_*`, `BYTE_REALTIME_INSTRUCTIONS`) under **Site configuration → Environment variables** so functions can call OpenAI.
+
+Production (**external proxy**): use full **HTTPS** URLs pointing at **`realtime-proxy`** on Railway/Render/etc.
 
 ### `realtime-proxy/` (server — secrets only here)
 
@@ -64,10 +67,9 @@ See **`realtime-proxy/.env.example`** and **`app/.env.example`**.
 
 ## Deployment
 
-- **Frontend (`app/`)** → **Vercel** (pick one):
-  - **Root directory = `app`:** build **`npm run build`**, output **`dist`**. **`app/vercel.json`** SPA rewrites fix refresh and **Add to Home Screen** deep links.
-  - **Root directory = repo root:** use the root **`vercel.json`** (`installCommand` / `buildCommand` / `outputDirectory` + same rewrites).
-- **Backend (`realtime-proxy/`)** → **Railway** or **Render**: run **`node index.mjs`** (or **`npm start`**), set **`OPENAI_API_KEY`** and **`PORT`**, expose a public URL, then set **`VITE_*`** on Vercel to that HTTPS base + paths.
+- **Netlify (recommended in this repo):** Link the GitHub repo; **`netlify.toml`** sets **`base = "app"`**, build **`npm ci && npm run build`**, publish **`dist`**. Functions live in **`netlify/functions/`**; **`app/public/_redirects`** maps **`/realtime/session`** and **`/meal-parse`** to them before the SPA fallback.
+- **Vercel:** Root **`vercel.json`** can build `app/` and expose **`api/**/*.js`** instead of Netlify functions.
+- **Backend only (`realtime-proxy/`)** → **Railway** or **Render** if you prefer not to use serverless: set **`OPENAI_API_KEY`**, expose HTTPS, then set **`VITE_REALTIME_SESSION_URL`** / **`VITE_MEAL_PARSE_URL`** to that host.
 
 ## Scripts (repo root)
 
