@@ -1,5 +1,8 @@
+import type { CSSProperties } from 'react'
+import { useMemo } from 'react'
+import { ChevronLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { AppScreenHeader } from '@/components/AppScreenHeader'
+import { NoirRollover, NoirStatusBar } from '@/components/noir/NoirPrimitives'
 import { useByte } from '@/context/useByte'
 import { dayNutritionTotals } from '@/lib/aggregate'
 import { dateKey, parseKey, rollingWeekKeys, shortWeekdayLabel, weekRangeLabel } from '@/lib/dates'
@@ -18,7 +21,6 @@ export function ProgressPage() {
   })
 
   const avgCalories = daily.reduce((a, d) => a + d.calories, 0) / Math.max(1, daily.length)
-
   const daysOnTrack = daily.filter((d) => d.calories > 0 && d.calories <= d.goal).length
 
   const streak = (() => {
@@ -53,104 +55,147 @@ export function ProgressPage() {
     return { name: label, avg, goal, unit: 'g' as const }
   })
 
+  const maxChart = useMemo(() => {
+    const peak = Math.max(...daily.map((d) => d.calories), goals.calorieGoal, 1)
+    return peak
+  }, [daily, goals.calorieGoal])
+
   return (
-    <div className="min-h-full bg-[#f7f6f3] text-stone-800">
-      <AppScreenHeader
-        onBack={() => navigate(-1)}
-        eyebrow="This week"
-        title="Your rhythm"
-        subtitle={rangeLabel}
-      />
+    <div className="noir-page-enter noir-screen-root noir-surface relative min-h-full text-[var(--paper)]">
+      <NoirStatusBar dark />
+      <div className="pb-32 pl-6 pr-6 pt-14">
+        <div className="mb-8 flex items-center justify-between">
+          <button
+            type="button"
+            aria-label="Back"
+            onClick={() => navigate(-1)}
+            className="noir-magnet -ml-2 rounded-full p-2 text-[var(--paper)]"
+          >
+            <ChevronLeft className="h-5 w-5" strokeWidth={1.75} />
+          </button>
+          <div className="eyebrow text-[var(--paper)]/60">This week</div>
+          <div className="w-6" aria-hidden />
+        </div>
 
-      <div className="border-b border-stone-200/80 px-6 py-8">
-        <ul className="divide-y divide-stone-200/80 border-y border-stone-200/80">
-          <li className="flex items-baseline justify-between py-4">
-            <span className="text-sm text-stone-500">Avg intake</span>
-            <span className="text-lg font-medium tabular-nums text-stone-900">
-              {Math.round(avgCalories)} <span className="text-sm font-normal text-stone-400">kcal</span>
-            </span>
-          </li>
-          <li className="flex items-baseline justify-between py-4">
-            <span className="text-sm text-stone-500">Days in range</span>
-            <span className="text-lg font-medium tabular-nums text-stone-900">
+        <div className="mb-10">
+          <div className="eyebrow mb-3 text-[var(--paper)]/60">{rangeLabel}</div>
+          <h1 className="display-serif text-[3rem] leading-[1.02] tracking-tight text-[var(--paper)]">
+            Steady hand,
+            <br />
+            steady heat.
+          </h1>
+        </div>
+
+        <div className="mb-10 border-b border-[var(--line)] pb-8">
+          <div className="eyebrow mb-2 text-[var(--paper)]/60">Average intake</div>
+          <div className="display-serif text-[5.75rem] leading-none tracking-tight text-[var(--paper)]">
+            <NoirRollover value={Math.round(avgCalories)} />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--paper)]/50">kcal / day</div>
+            <div className="font-mono text-[11px] text-[var(--paper)]/50">goal {goals.calorieGoal}</div>
+          </div>
+        </div>
+
+        <div className="mb-10 grid grid-cols-3 gap-3 border-b border-[var(--line)] pb-8">
+          <div>
+            <div className="eyebrow mb-1 text-[var(--paper)]/55">Days in range</div>
+            <div className="display-serif text-3xl leading-none">
               {daysOnTrack}
-              <span className="text-sm font-normal text-stone-400"> / 7</span>
-            </span>
-          </li>
-          <li className="flex items-baseline justify-between py-4">
-            <span className="text-sm text-stone-500">Logging streak</span>
-            <span className="text-lg font-medium tabular-nums text-stone-900">
-              {streak} <span className="text-sm font-normal text-stone-400">days</span>
-            </span>
-          </li>
-        </ul>
-      </div>
-
-      <div className="px-6 py-8">
-        <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Energy by day</p>
-        <div className="mb-4 flex h-40 items-end justify-between gap-1.5">
-          {daily.map((day) => {
-            const percentage = day.goal > 0 ? (day.calories / day.goal) * 100 : 0
-            const isOverGoal = day.calories > day.goal
-            return (
-              <div key={day.key} className="flex flex-1 flex-col items-center gap-2">
-                <div className="flex w-full flex-1 flex-col justify-end overflow-hidden rounded-lg bg-stone-200/50">
-                  <div
-                    className={`w-full rounded-t-lg ${isOverGoal ? 'bg-stone-600' : 'bg-stone-800'}`}
-                    style={{ height: `${Math.min(100, percentage)}%`, minHeight: day.calories > 0 ? '4px' : 0 }}
-                  />
-                </div>
-                <div className="text-[10px] font-medium text-stone-400">{shortWeekdayLabel(day.key)}</div>
-              </div>
-            )
-          })}
+              <span className="text-[var(--paper)]/30">/7</span>
+            </div>
+          </div>
+          <div className="col-span-2">
+            <div className="eyebrow mb-1 text-[var(--paper)]/55">Logging streak</div>
+            <div className="display-serif text-3xl leading-none">{streak} days</div>
+          </div>
         </div>
-        <p className="text-center text-xs text-stone-400">
-          Taller bars mean more logged. Darker fill is over your calorie target.
-        </p>
-      </div>
 
-      <div className="px-6 pb-8">
-        <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">
-          Macro averages vs goal
-        </p>
-        <div className="space-y-6">
-          {macroWeekly.map((macro) => {
-            const pct = macro.goal > 0 ? Math.min(100, (macro.avg / macro.goal) * 100) : 0
-            return (
-              <div key={macro.name}>
-                <div className="mb-2 flex items-baseline justify-between text-sm">
-                  <span className="font-medium text-stone-800">{macro.name}</span>
-                  <span className="tabular-nums text-stone-500">
-                    {Math.round(macro.avg)} / {macro.goal}
-                    {macro.unit} <span className="text-stone-400">daily avg</span>
-                  </span>
+        <div className="mb-10">
+          <div className="eyebrow mb-4 text-[var(--paper)]/60">Energy by day</div>
+          <div className="flex h-48 items-end justify-between gap-2">
+            {daily.map((day, i) => {
+              const pct = day.calories / maxChart
+              const over = day.calories > day.goal
+              return (
+                <div key={day.key} className="flex flex-1 flex-col items-center gap-2">
+                  <div className="relative flex h-full w-full flex-col justify-end">
+                    <div
+                      className="noir-bar-fill w-full rounded-t-sm"
+                      style={
+                        {
+                          height: `${pct * 100}%`,
+                          minHeight: day.calories > 0 ? 4 : 0,
+                          background: over ? 'var(--champagne)' : 'var(--paper)',
+                          '--pct': 1,
+                          animationDelay: `${i * 80}ms`,
+                        } as CSSProperties
+                      }
+                    />
+                    <div
+                      className="absolute left-0 right-0 border-t border-dashed border-[var(--paper)]/30"
+                      style={{ bottom: `${(goals.calorieGoal / maxChart) * 100}%` }}
+                    />
+                  </div>
+                  <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--paper)]/50">
+                    {shortWeekdayLabel(day.key)}
+                  </div>
                 </div>
-                <div className="h-1 overflow-hidden rounded-full bg-stone-200/80">
-                  <div
-                    className="h-full rounded-full bg-stone-700 transition-[width] duration-500"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+          <div className="mt-3 font-mono text-[11px] text-[var(--paper)]/45">
+            — — goal line ·{' '}
+            <span className="font-semibold" style={{ color: 'var(--champagne)' }}>
+              ■
+            </span>{' '}
+            over
+          </div>
         </div>
-      </div>
 
-      <div className="px-6 pb-28">
-        <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Reflection</p>
-        <div className="space-y-4 text-sm leading-relaxed text-stone-600">
-          <p>
+        <div className="mb-10">
+          <div className="eyebrow mb-4 text-[var(--paper)]/60">Macros vs goal · weekly avg</div>
+          <div className="space-y-5">
+            {macroWeekly.map((macro) => {
+              const pct = macro.goal > 0 ? Math.min(1, macro.avg / macro.goal) : 0
+              return (
+                <div key={macro.name}>
+                  <div className="mb-2 flex items-baseline justify-between">
+                    <span className="display-serif text-lg text-[var(--paper)]">{macro.name}</span>
+                    <span className="font-mono text-[11px] tabular-nums text-[var(--paper)]/55">
+                      {Math.round(macro.avg)}
+                      <span className="text-[var(--paper)]/35">
+                        {' '}
+                        / {macro.goal}
+                        {macro.unit}
+                      </span>
+                    </span>
+                  </div>
+                  <div className="h-[3px] overflow-hidden bg-[var(--line-soft)]">
+                    <div
+                      className="h-full bg-[var(--paper)] transition-[width] duration-500"
+                      style={{ width: `${pct * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="border-t border-[var(--line)] pt-8">
+          <div className="eyebrow mb-3 text-[var(--paper)]/60">Reflection</div>
+          <p className="display-serif text-[22px] leading-[1.3] text-[var(--paper)]/90">
             {daysOnTrack >= 4
               ? 'You’ve been steady this week. That kind of rhythm makes logging feel effortless.'
-              : 'Logging on more days will make patterns easier to see—no pressure, one meal at a time.'}
-          </p>
-          <p>
+              : 'Logging on more days will make patterns easier to see—no pressure, one meal at a time.'}{' '}
             {macroWeekly[0].avg < goals.proteinGoal * 0.9
               ? 'If you’d like more protein, try mentioning lean meats, legumes, or dairy when you log.'
               : 'Your protein average is in a good place for the week.'}
           </p>
+          <div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--paper)]/45">
+            — Byte, your cooking assistant
+          </div>
         </div>
       </div>
     </div>

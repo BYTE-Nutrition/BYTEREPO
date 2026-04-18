@@ -3,16 +3,24 @@
  *
  * OPENAI_API_KEY must be set as an environment variable on your hosting platform
  * (e.g. Railway, Render, Fly.io for this Node server). Never hardcode it in this file
- * or commit it to git. The Vite frontend (Vercel/Netlify/etc.) only receives public
+ * or commit it to git. The Vite frontend (Netlify, static host, etc.) only receives public
  * URLs via VITE_* vars — never put the OpenAI key in the client bundle.
  *
  * Locally: copy `realtime-proxy/.env.example` to `realtime-proxy/.env` or run
  * `export OPENAI_API_KEY=...` before `npm start`. The key is read only from
  * `process.env` and is not logged or returned in any JSON/body response.
+ * `dotenv` loads `realtime-proxy/.env` on startup (see below) so `npm start`
+ * picks up OPENAI_API_KEY without manual export.
  */
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import dotenv from 'dotenv'
 import cors from 'cors'
 import express from 'express'
 import { registerMealParse } from './meal-parse.mjs'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: path.join(__dirname, '.env') })
 
 const PORT = Number(process.env.PORT) || 5050
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
@@ -28,6 +36,7 @@ Do NOT calculate exact calories — that's handled separately. Focus on balance,
 
 The client may send session updates with structured meal estimates from the USDA FoodData Central pipeline; when present, use those numbers for portion and health questions and say they come from USDA-backed data.`
 
+/** Initial session for POST /v1/realtime/calls — keep fields aligned with OpenAI’s allowlist (no turn_detection here). */
 function buildSessionConfigJson(instructions) {
   return JSON.stringify({
     type: 'realtime',
@@ -38,12 +47,6 @@ function buildSessionConfigJson(instructions) {
         transcription: { model: 'gpt-4o-mini-transcribe' },
       },
       output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' },
-    },
-    turn_detection: {
-      type: 'server_vad',
-      threshold: 0.5,
-      prefix_padding_ms: 300,
-      silence_duration_ms: 500,
     },
   })
 }
@@ -119,7 +122,15 @@ app.post('/realtime/session', async (req, res) => {
     const text = await r.text()
     if (!r.ok) {
       console.error('OpenAI realtime/calls error', r.status, text.slice(0, 500))
-      res.status(502).json({ error: 'Upstream realtime session failed' })
+      let errMsg = 'Upstream realtime session failed'
+      try {
+        const j = JSON.parse(text)
+        const m = j?.error?.message
+        if (typeof m === 'string' && m.trim()) errMsg = m.trim()
+      } catch {
+        /* ignore non-JSON body */
+      }
+      res.status(502).json({ error: errMsg })
       return
     }
 

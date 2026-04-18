@@ -8,33 +8,57 @@ const MAX_TRANSCRIPT = 8000
 const PARSE_SYSTEM_PROMPT =
   'You are a nutrition data parser. Given a description of a meal or ingredients, return a JSON array of meal items with estimated nutritional data. Be accurate with quantities. Return only valid JSON, no explanation. Wrap the array in an object with key "items". Each item: id (string), name (string), amount (string), calories, protein, carbs, fat (numbers).'
 
-function isMealItemShape(x) {
-  return (
-    x &&
-    typeof x === 'object' &&
-    typeof x.name === 'string' &&
-    typeof x.amount === 'string' &&
-    typeof x.calories === 'number' &&
-    typeof x.protein === 'number' &&
-    typeof x.carbs === 'number' &&
-    typeof x.fat === 'number'
-  )
+function coerceFiniteNumber(v) {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (typeof v === 'string' && v.trim()) {
+    const n = Number(v)
+    if (Number.isFinite(n)) return n
+  }
+  return null
+}
+
+function normalizeOneRow(row) {
+  if (!row || typeof row !== 'object') return null
+  const name = typeof row.name === 'string' ? row.name.trim() : ''
+  if (!name) return null
+  const amountRaw =
+    typeof row.amount === 'string'
+      ? row.amount.trim()
+      : typeof row.amount === 'number' && Number.isFinite(row.amount)
+        ? String(row.amount)
+        : ''
+  const amount = amountRaw || '1 serving'
+  const calories = coerceFiniteNumber(row.calories)
+  const protein = coerceFiniteNumber(row.protein)
+  const carbs = coerceFiniteNumber(row.carbs)
+  const fat = coerceFiniteNumber(row.fat)
+  if (calories === null || protein === null || carbs === null || fat === null) return null
+  return {
+    id: typeof row.id === 'string' && row.id.trim() ? row.id.trim() : crypto.randomUUID(),
+    name,
+    amount,
+    calories: Math.max(0, Math.round(calories)),
+    protein: Math.max(0, Math.round(protein)),
+    carbs: Math.max(0, Math.round(carbs)),
+    fat: Math.max(0, Math.round(fat)),
+  }
+}
+
+function extractItemsArray(parsed) {
+  if (!parsed || typeof parsed !== 'object') return null
+  const c = parsed.items
+  if (Array.isArray(c)) return c
+  const alt = parsed.meal_items ?? parsed.meals ?? parsed.data
+  if (Array.isArray(alt)) return alt
+  return null
 }
 
 function normalizeItems(raw) {
   if (!Array.isArray(raw)) return null
   const out = []
   for (const row of raw) {
-    if (!isMealItemShape(row)) continue
-    out.push({
-      id: typeof row.id === 'string' && row.id.trim() ? row.id.trim() : crypto.randomUUID(),
-      name: row.name.trim(),
-      amount: row.amount.trim(),
-      calories: Math.max(0, Math.round(row.calories)),
-      protein: Math.max(0, Math.round(row.protein)),
-      carbs: Math.max(0, Math.round(row.carbs)),
-      fat: Math.max(0, Math.round(row.fat)),
-    })
+    const one = normalizeOneRow(row)
+    if (one) out.push(one)
   }
   return out
 }
@@ -44,6 +68,14 @@ function normalizeItems(raw) {
  * @param {() => string | undefined} getApiKey
  */
 export function registerMealParse(app, getApiKey) {
+  app.get('/meal-parse', (_req, res) => {
+    res.type('text/plain').status(405).send(
+      'byte-realtime-proxy: this URL is for POST only.\n' +
+        'Send Content-Type: application/json with body: {"transcript":"your meal description"}.\n' +
+        'Opening this address in a tab sends GET, which cannot parse meals — use the Byte app (or curl POST).',
+    )
+  })
+
   app.post('/meal-parse', async (req, res) => {
     const apiKey = getApiKey()
     if (!apiKey) {
@@ -106,7 +138,8 @@ export function registerMealParse(app, getApiKey) {
         return
       }
 
-      const items = normalizeItems(parsed?.items)
+      const rawItems = extractItemsArray(parsed)
+      const items = normalizeItems(rawItems)
       if (!items) {
         res.status(500).json({ error: 'Model response missing items array' })
         return

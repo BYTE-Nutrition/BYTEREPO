@@ -14,7 +14,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const isLanding = pathname === '/'
   const isOnboarding = pathname === '/onboarding'
   const isSignIn = pathname === '/signin'
-  const hideNav = isLanding || isOnboarding || isSignIn
+  const isVoice = pathname === '/voice'
+  const hideNav = isLanding || isOnboarding || isSignIn || isVoice
   /** Main app: centered phone-sized column on desktop; `transform` traps `position:fixed` (nav, immersive voice). */
   const phoneFrame = !isLanding && !isOnboarding && !isSignIn
 
@@ -37,15 +38,15 @@ export function Layout({ children }: { children: ReactNode }) {
         isLanding && 'bg-white',
         isOnboarding && 'bg-[#f7f6f3]',
         phoneFrame &&
-          'bg-[#f7f6f3] md:flex md:min-h-svh md:items-center md:justify-center md:bg-neutral-400/45 md:p-5 md:pt-8 md:pb-8',
+          'bg-[#0a0a0a] md:flex md:min-h-svh md:items-center md:justify-center md:bg-[#111] md:p-5 md:pt-8 md:pb-8',
       )}
     >
       <div
         className={cn(
           'relative flex w-full flex-col',
-          phoneFrame
-            ? 'min-h-svh md:mx-auto md:h-[min(844px,90svh)] md:max-h-[90svh] md:min-h-0 md:max-w-[390px] md:overflow-hidden md:rounded-[2.75rem] md:bg-[#f7f6f3] md:shadow-[0_28px_90px_-24px_rgba(0,0,0,0.5)] md:ring-[10px] md:ring-neutral-950 md:[transform:translateZ(0)]'
-            : 'min-h-svh',
+          phoneFrame &&
+            'byte-noir min-h-svh bg-[var(--ink)] font-[family-name:Archivo] md:mx-auto md:h-[min(844px,90svh)] md:max-h-[90svh] md:min-h-0 md:max-w-[390px] md:overflow-hidden md:rounded-[2.75rem] md:shadow-[0_28px_90px_-24px_rgba(0,0,0,0.55)] md:ring-[10px] md:ring-[#050505] md:[transform:translateZ(0)]',
+          !phoneFrame && 'min-h-svh',
         )}
       >
         <div

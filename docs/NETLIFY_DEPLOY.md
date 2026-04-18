@@ -50,11 +50,12 @@ If the Python service is deployed (e.g. `https://byterepo.onrender.com`):
    (replace host with your real Render web service URL.)
 
 2. **Render** → service → **Environment**:  
-   **`MEAL_PARSE_CORS_ORIGINS`** = your Netlify origin(s), e.g.  
-   `https://your-site.netlify.app`  
-   (comma-separated if multiple; required so the browser may call Render from the Netlify app.)
+   **`MEAL_PARSE_CORS_ORIGINS`** = every **browser origin** that will call this API, comma-separated (spaces after commas are fine). Examples:
+   - Netlify only: `https://your-site.netlify.app`
+   - Netlify **and** local Vite: `https://your-site.netlify.app,http://localhost:5173`  
+   If `http://localhost:5173` is missing, **`npm run dev`** will hit a CORS error while production may still work. **Alternative (no Render CORS change for localhost):** in **`app/.env.local`** set **`VITE_MEAL_PARSE_USDA_TARGET=https://…onrender.com`** (no trailing slash) and **`VITE_MEAL_PARSE_URL=/meal-parse-usda`** so Vite proxies same-origin **`/meal-parse-usda`** → Render’s **`/meal-parse`** (see **`app/.env.example`**). Restart **`npm run dev`** after editing.
 
-3. Redeploy **Netlify** after changing `VITE_MEAL_PARSE_URL`.
+3. Redeploy **Netlify** after changing `VITE_MEAL_PARSE_URL`. **Redeploy Render** (or push the Python change) after changing **`MEAL_PARSE_CORS_ORIGINS`** so the running service picks it up.
 
 **Render** `OPENAI_API_KEY` / `USDA_API_KEY` apply only to the **Python** meal-parse app, not to Netlify voice functions.
 

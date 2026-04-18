@@ -37,10 +37,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: {
+        redirectTo: window.location.origin,
+        skipBrowserRedirect: true,
+      },
     })
+    if (error) throw error
+    if (!data.url) return
+
+    // OAuth must run at the top level. Embedded previews (iframe) only change the
+    // inner frame with the default redirect and Chrome reports a cross-frame error.
+    const topWin = window.top ?? window
+    try {
+      topWin.location.assign(data.url)
+    } catch {
+      window.open(data.url, '_blank', 'noopener,noreferrer')
+    }
   }
 
   const signOut = async () => {

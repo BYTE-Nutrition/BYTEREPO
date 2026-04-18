@@ -249,13 +249,25 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
         try {
           const rawText = await sdpResponse.text()
           try {
-            const j = JSON.parse(rawText) as { error?: string }
-            if (j?.error) detail = j.error
+            const j = JSON.parse(rawText) as {
+              error?: string | { message?: string }
+            }
+            if (typeof j?.error === 'string' && j.error.trim()) detail = j.error.trim()
+            else if (
+              j?.error &&
+              typeof j.error === 'object' &&
+              typeof (j.error as { message?: unknown }).message === 'string'
+            ) {
+              detail = String((j.error as { message: string }).message).trim() || detail
+            }
           } catch {
             if (rawText) detail = rawText.slice(0, 200)
           }
         } catch {
           // couldn't read body
+        }
+        if (import.meta.env.DEV) {
+          console.error('[Byte realtime] POST session failed', sdpResponse.status, detail)
         }
         throw new Error(detail || 'Session request failed')
       }

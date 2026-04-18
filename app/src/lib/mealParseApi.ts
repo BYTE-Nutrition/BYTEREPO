@@ -113,7 +113,19 @@ export async function parseMealWithApi(
       body: JSON.stringify({ transcript: text }),
       signal: combined.signal,
     })
-    if (!res.ok) return { items: null }
+    if (!res.ok) {
+      let hint: string | undefined
+      try {
+        const errBody: unknown = await res.json()
+        if (errBody && typeof errBody === 'object') {
+          const msg = (errBody as Record<string, unknown>).error
+          if (typeof msg === 'string' && msg.trim()) hint = msg.trim()
+        }
+      } catch {
+        /* ignore non-JSON error bodies */
+      }
+      return { items: null, hint }
+    }
     const json: unknown = await res.json()
     return parseMealItemsPayload(json)
   } catch {

@@ -6,9 +6,9 @@ import { GOAL_PACE_OPTIONS, USER_GOAL_OPTIONS } from '@/lib/goalsFromProfile'
 import type { GoalPace, UserGoal, UserSex } from '@/lib/types'
 
 const field =
-  'mt-2 w-full rounded-xl border border-stone-200/80 bg-white/90 px-3.5 py-3 text-[15px] text-stone-900 shadow-sm focus:border-stone-300 focus:outline-none focus:ring-1 focus:ring-stone-400/25'
+  'mt-2 w-full rounded-xl border border-[var(--line)] bg-[var(--ink-2)] px-3.5 py-3 text-[15px] text-[var(--paper)] shadow-sm focus:border-[var(--champagne)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--champagne)]/30'
 
-const sectionTitle = 'text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400'
+const sectionTitle = 'eyebrow text-[var(--paper)]/55'
 
 export function ProfilePage() {
   const navigate = useNavigate()
@@ -26,7 +26,7 @@ export function ProfilePage() {
   } = useByte()
 
   return (
-    <div className="min-h-full bg-[#f7f6f3] text-stone-800">
+    <div className="noir-page-enter noir-screen-root noir-surface relative min-h-full text-[var(--paper)]">
       <AppScreenHeader
         onBack={() => navigate(-1)}
         eyebrow="You"
@@ -37,11 +37,11 @@ export function ProfilePage() {
       <div className="space-y-10 px-6 pb-28 pt-2">
         <section>
           <p className={`${sectionTitle} mb-4`}>About you</p>
-          <p className="mb-4 text-sm leading-relaxed text-stone-500">
+          <p className="mb-4 text-sm leading-relaxed text-[var(--paper)]/55">
             Body stats and goals recalculate your daily targets. You can still fine-tune numbers below.
           </p>
-          <div className="space-y-5 rounded-2xl border border-stone-200/60 bg-white/50 px-4 py-5">
-            <label className="block text-sm font-medium text-stone-600">
+          <div className="space-y-5 rounded-2xl border border-[var(--line)] bg-[var(--ink-2)]/90 px-4 py-5">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Name
               <input
                 type="text"
@@ -50,7 +50,7 @@ export function ProfilePage() {
                 onChange={(e) => updateProfile({ name: e.target.value })}
               />
             </label>
-            <label className="block text-sm font-medium text-stone-600">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Age
               <select
                 className={field}
@@ -64,7 +64,7 @@ export function ProfilePage() {
                 ))}
               </select>
             </label>
-            <label className="block text-sm font-medium text-stone-600">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Sex (for energy estimates)
               <select
                 className={field}
@@ -76,7 +76,7 @@ export function ProfilePage() {
                 <option value="prefer_not_say">Prefer not to say</option>
               </select>
             </label>
-            <label className="block text-sm font-medium text-stone-600">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Height (cm)
               <input
                 type="number"
@@ -87,7 +87,7 @@ export function ProfilePage() {
                 onChange={(e) => updateProfile({ heightCm: Number(e.target.value) || 170 })}
               />
             </label>
-            <label className="block text-sm font-medium text-stone-600">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Weight (kg)
               <input
                 type="number"
@@ -98,7 +98,7 @@ export function ProfilePage() {
                 onChange={(e) => updateProfile({ weightKg: Number(e.target.value) || 72 })}
               />
             </label>
-            <label className="block text-sm font-medium text-stone-600">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Home-cooked meals / week
               <input
                 type="number"
@@ -109,7 +109,7 @@ export function ProfilePage() {
                 onChange={(e) => updateProfile({ cooksPerWeek: Number(e.target.value) || 0 })}
               />
             </label>
-            <label className="block text-sm font-medium text-stone-600">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Main goal
               <select
                 className={field}
@@ -123,7 +123,7 @@ export function ProfilePage() {
                 ))}
               </select>
             </label>
-            <label className="block text-sm font-medium text-stone-600">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Goal pace
               <select
                 className={field}
@@ -142,8 +142,8 @@ export function ProfilePage() {
 
         <section>
           <p className={`${sectionTitle} mb-4`}>Daily targets</p>
-          <div className="space-y-5 rounded-2xl border border-stone-200/60 bg-white/50 px-4 py-5">
-            <label className="block text-sm font-medium text-stone-600">
+          <div className="space-y-5 rounded-2xl border border-[var(--line)] bg-[var(--ink-2)]/90 px-4 py-5">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Calories
               <input
                 type="number"
@@ -152,7 +152,7 @@ export function ProfilePage() {
                 onChange={(e) => setGoals({ calorieGoal: Number(e.target.value) || 0 })}
               />
             </label>
-            <label className="block text-sm font-medium text-stone-600">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Protein (g)
               <input
                 type="number"
@@ -161,7 +161,7 @@ export function ProfilePage() {
                 onChange={(e) => setGoals({ proteinGoal: Number(e.target.value) || 0 })}
               />
             </label>
-            <label className="block text-sm font-medium text-stone-600">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Carbs (g)
               <input
                 type="number"
@@ -170,7 +170,7 @@ export function ProfilePage() {
                 onChange={(e) => setGoals({ carbsGoal: Number(e.target.value) || 0 })}
               />
             </label>
-            <label className="block text-sm font-medium text-stone-600">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Fat (g)
               <input
                 type="number"
@@ -184,8 +184,8 @@ export function ProfilePage() {
 
         <section>
           <p className={`${sectionTitle} mb-4`}>Today</p>
-          <div className="rounded-2xl border border-stone-200/60 bg-white/50 px-4 py-5">
-            <label className="block text-sm font-medium text-stone-600">
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--ink-2)]/90 px-4 py-5">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Exercise calories (adds to your budget)
               <input
                 type="number"
@@ -199,8 +199,8 @@ export function ProfilePage() {
 
         <section>
           <p className={`${sectionTitle} mb-4`}>Plan</p>
-          <div className="rounded-2xl border border-stone-200/60 bg-white/50 px-4 py-5">
-            <label className="block text-sm font-medium text-stone-600">
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--ink-2)]/90 px-4 py-5">
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
               Plan start (for week count on Home)
               <input
                 type="date"
@@ -209,7 +209,7 @@ export function ProfilePage() {
                 onChange={(e) => e.target.value && setPlanStartDate(e.target.value)}
               />
             </label>
-            <p className="mt-3 text-xs leading-relaxed text-stone-400">
+            <p className="mt-3 text-xs leading-relaxed text-[var(--paper)]/45">
               Set to the Monday you started for a meaningful week number.
             </p>
           </div>
@@ -219,7 +219,7 @@ export function ProfilePage() {
           <button
             type="button"
             onClick={() => resetToDemo()}
-            className="w-full rounded-2xl bg-stone-900 py-3.5 text-[15px] font-medium text-[#f5e6c8] transition-colors hover:bg-stone-800"
+            className="noir-magnet w-full rounded-full bg-[var(--paper)] py-3.5 font-mono text-xs uppercase tracking-[0.18em] text-[var(--ink)]"
           >
             Reset to demo data
           </button>
@@ -235,14 +235,14 @@ export function ProfilePage() {
                 navigate('/onboarding', { replace: true })
               }
             }}
-            className="w-full rounded-2xl border border-stone-300/80 bg-white/60 py-3.5 text-[15px] font-medium text-stone-700"
+            className="w-full rounded-full border border-[var(--line-strong)] py-3.5 font-mono text-xs uppercase tracking-[0.18em] text-[var(--paper)]"
           >
             Clear all data
           </button>
           <button
             type="button"
             onClick={() => signOut()}
-            className="w-full rounded-2xl border border-stone-200/60 bg-white/40 py-3.5 text-[15px] font-medium text-stone-400"
+            className="w-full rounded-full border border-[var(--line)] py-3.5 font-mono text-xs uppercase tracking-[0.18em] text-[var(--paper)]/50"
           >
             Sign out
           </button>

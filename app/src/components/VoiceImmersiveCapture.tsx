@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Keyboard, Mic, X } from 'lucide-react'
-import { MEAL_LABELS, MEAL_ORDER, type MealItem, type MealSlot } from '@/lib/types'
+import { Keyboard, X } from 'lucide-react'
+import { NoirMealSlotRail, NoirRollover, NoirStatusBar } from '@/components/noir/NoirPrimitives'
+import type { MealItem, MealSlot } from '@/lib/types'
 
 type Props = {
   slot: MealSlot
@@ -20,8 +21,6 @@ type Props = {
   onUseKeyboard: () => void
   bottomError: string | null
 }
-
-const sheetEase = 'cubic-bezier(0.22, 1, 0.36, 1)'
 
 export function VoiceImmersiveCapture({
   slot,
@@ -48,176 +47,210 @@ export function VoiceImmersiveCapture({
     return () => cancelAnimationFrame(id)
   }, [])
 
-  const scale = 1 + audioLevel * 0.14
-  const ringOpacity = 0.2 + audioLevel * 0.35
+  const orbScale = 1 + audioLevel * 0.18
+  const orbRingOpacity = 0.25 + audioLevel * 0.45
+  const totalCals = liveItems.reduce((a, i) => a + i.calories, 0)
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#f7f6f3] text-stone-800">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stone-200/80 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+    <div className="byte-noir fixed inset-0 z-50 flex flex-col overflow-hidden bg-[var(--ink)] text-[var(--paper)]">
+      <NoirStatusBar dark />
+
+      <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between px-6 pt-14">
         <button
           type="button"
           aria-label="Close"
           onClick={onClose}
-          className="rounded-full p-2.5 text-stone-500 transition-colors hover:bg-stone-200/50 hover:text-stone-800"
+          className="-ml-2 rounded-full p-2 text-[var(--paper)]/70 hover:text-[var(--paper)]"
         >
-          <X className="h-5 w-5" strokeWidth={1.75} />
+          <X className="h-[22px] w-[22px]" strokeWidth={1.75} />
         </button>
-        <select
-          value={slot}
-          onChange={(e) => onSlotChange(e.target.value as MealSlot)}
-          aria-label="Meal"
-          className="max-w-[11rem] rounded-xl border border-stone-200/80 bg-white/90 px-3 py-2 text-sm font-medium text-stone-900 shadow-sm focus:outline-none focus:ring-1 focus:ring-stone-400/30"
-        >
-          {MEAL_ORDER.map((s) => (
-            <option key={s} value={s}>
-              {MEAL_LABELS[s]}
-            </option>
-          ))}
-        </select>
+        <div className="eyebrow text-[var(--paper)]/50">Voice</div>
         <button
           type="button"
           onClick={onUseKeyboard}
-          className="rounded-full p-2.5 text-stone-500 transition-colors hover:bg-stone-200/50 hover:text-stone-800"
+          className="-mr-2 rounded-full p-2 text-[var(--paper)]/70"
           aria-label="Type with keyboard"
         >
           <Keyboard className="h-5 w-5" strokeWidth={1.75} />
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col px-5">
-        <p className="shrink-0 pt-2 text-center text-[11px] font-medium uppercase tracking-[0.2em] text-stone-400">
-          Voice capture
-        </p>
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div
+          className="absolute -left-32 top-1/3 h-[400px] w-[400px] rounded-full opacity-60"
+          style={{
+            background: 'radial-gradient(circle, rgba(216,200,156,0.18) 0%, rgba(216,200,156,0) 65%)',
+            animation: 'noir-orb-float 6s ease-in-out infinite',
+          }}
+        />
+        <div
+          className="absolute -right-20 bottom-10 h-[360px] w-[360px] rounded-full opacity-60"
+          style={{
+            background: 'radial-gradient(circle, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 65%)',
+            animation: 'noir-orb-float 8s ease-in-out infinite reverse',
+          }}
+        />
+      </div>
 
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
-          <div className="relative mb-6 flex h-[min(38vh,16rem)] w-full max-w-sm items-center justify-center">
-            {listening && (
-              <>
-                <div
-                  className="absolute rounded-full bg-amber-400/25 transition-[transform,opacity] duration-75"
-                  style={{
-                    width: '17rem',
-                    height: '17rem',
-                    transform: `scale(${1 + audioLevel * 0.35})`,
-                    opacity: ringOpacity,
-                  }}
-                />
-                <div
-                  className="absolute rounded-full bg-stone-400/15 transition-[transform,opacity] duration-75"
-                  style={{
-                    width: '13rem',
-                    height: '13rem',
-                    transform: `scale(${scale})`,
-                    opacity: 0.4 + audioLevel * 0.2,
-                  }}
-                />
-              </>
-            )}
+      <div className="noir-canvas-bg noir-grain relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="relative z-10 flex flex-col items-center pt-[90px]">
+          <div className="absolute left-5 top-[170px] z-20">
+            <NoirMealSlotRail slot={slot} onSlotChange={onSlotChange} />
+          </div>
+
+          <div className="relative h-[170px] w-[170px]">
+            <div className="noir-ring rounded-full" style={{ opacity: orbRingOpacity }} />
+            <div className="noir-ring delay-1 rounded-full" style={{ opacity: orbRingOpacity * 0.8 }} />
+            <div className="noir-ring delay-2 rounded-full" style={{ opacity: orbRingOpacity * 0.6 }} />
             <button
               type="button"
               onClick={onToggleMic}
               disabled={!speechSupported}
-              className="relative inline-flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f7f6f3] disabled:opacity-40"
+              className="absolute inset-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--champagne)]/40 disabled:opacity-40"
+              aria-label={listening ? 'Stop listening' : 'Start listening'}
             >
-              <div
-                className="flex h-36 w-36 items-center justify-center rounded-full bg-stone-900 shadow-[0_20px_50px_-18px_rgba(0,0,0,0.35)] transition-transform duration-75"
-                style={{ transform: `scale(${listening ? scale : 1})` }}
-              >
-                <Mic className="h-[3.75rem] w-[3.75rem] text-[#f5e6c8]" strokeWidth={1.25} />
-              </div>
+              <span className="sr-only">{listening ? 'Stop' : 'Speak'}</span>
             </button>
-          </div>
-
-          <p className="mb-2 shrink-0 text-center text-sm font-medium text-stone-800">
-            {statusLine ??
-              (listening ? 'Listening…' : speechSupported ? 'Tap the mic to speak' : 'Dictation unavailable')}
-          </p>
-          {micVizError && (
-            <p className="mb-2 max-w-xs shrink-0 text-center text-xs text-amber-800/90">{micVizError}</p>
-          )}
-          {!speechSupported && (
-            <p className="mb-3 max-w-[20rem] shrink-0 text-center text-sm text-stone-500">
-              Use Chrome or Edge, or open the keyboard to type.
-            </p>
-          )}
-
-          <div className="w-full max-w-md shrink-0 px-1 pb-2">
-            <p
-              className="line-clamp-3 min-h-[3.5rem] text-center text-[15px] leading-relaxed text-stone-600"
-              aria-live="polite"
-            >
-              {transcript.trim() ? transcript : 'Your words appear here as you speak…'}
-            </p>
-          </div>
-        </div>
-
-        <div
-          className="mt-auto shrink-0 rounded-t-[1.75rem] border border-b-0 border-stone-200/70 bg-[#f2f0ec]/95 px-3 pt-3 shadow-[0_-16px_48px_-12px_rgba(0,0,0,0.1)] backdrop-blur-md motion-reduce:transition-none"
-          style={{
-            transform: sheetIn ? 'translateY(0)' : 'translateY(calc(100% + 1rem))',
-            transition: `transform 520ms ${sheetEase}`,
-          }}
-        >
-          <div className="mx-auto flex min-h-0 max-h-[min(42vh,320px)] flex-col gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             <div
-              className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-stone-200/80 bg-white/80 shadow-sm"
+              className="pointer-events-none absolute inset-0 overflow-hidden rounded-full"
               style={{
-                transform: liveItems.length > 0 ? 'translateY(0)' : undefined,
+                background: 'radial-gradient(circle at 35% 30%, #2a2a2a 0%, #141414 55%, #080808 100%)',
+                boxShadow:
+                  'inset 0 0 40px rgba(255,255,255,0.05), inset 0 -20px 50px rgba(0,0,0,0.5), 0 30px 60px -10px rgba(0,0,0,0.7)',
+                transform: `scale(${orbScale})`,
+                transition: 'transform 120ms ease-out',
               }}
             >
-              <div className="border-b border-stone-200/80 px-4 py-2.5">
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Ingredients</p>
-              </div>
-              <ul className="max-h-[min(18vh,150px)] space-y-0 overflow-y-auto overscroll-contain px-2 py-2">
-                {liveItems.length === 0 ? (
-                  <li className="px-3 py-4 text-center text-sm text-stone-400">Parsed items show up here</li>
-                ) : (
-                  liveItems.map((item, index) => (
-                    <li
-                      key={`${item.name}-${index}`}
-                      className="border-b border-stone-200/60 px-3 py-2.5 text-[15px] text-stone-800 last:border-0"
-                    >
-                      <span className="font-medium">{item.name}</span>
-                      <span className="text-stone-500"> — {item.calories} kcal</span>
-                    </li>
-                  ))
-                )}
-              </ul>
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background:
+                    'radial-gradient(ellipse at 35% 28%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 50%)',
+                  animation: 'noir-orb-rotate 20s linear infinite',
+                }}
+              />
             </div>
+          </div>
 
-            <div
-              className="shrink-0 rounded-2xl border border-amber-200/50 bg-amber-50/50"
-              aria-live="polite"
-              aria-label="Cooking tips"
-            >
-              <div className="border-b border-amber-200/40 px-4 py-2">
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-amber-900/60">
-                  While cooking
-                </p>
-              </div>
-              <ul className="max-h-[min(14vh,120px)] space-y-2 overflow-y-auto overscroll-contain px-3 py-2.5">
-                {cookingTips.map((tip, i) => (
-                  <li key={i} className="flex gap-2 text-[13px] leading-snug text-stone-700">
-                    <span className="mt-0.5 shrink-0 font-medium text-amber-800/80" aria-hidden>
-                      •
-                    </span>
-                    <span>{tip}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="mt-10 eyebrow text-[var(--paper)]/60">
+            {transcript.trim() ? 'Byte is composing' : statusLine ?? 'Byte is listening'}
+          </div>
 
-            {bottomError && <p className="text-center text-sm text-red-600/90">{bottomError}</p>}
-
-            <button
-              type="button"
-              onClick={onReview}
-              className="w-full rounded-2xl bg-stone-900 py-3.5 text-[15px] font-medium text-[#f5e6c8] transition-colors hover:bg-stone-800 active:scale-[0.99]"
-            >
-              Review
-            </button>
+          <div className="mt-5 flex h-8 items-center gap-[3px] text-[var(--paper)]">
+            {Array.from({ length: 22 }).map((_, i) => (
+              <span
+                key={i}
+                className="noir-wave-bar h-full w-[3px]"
+                style={{
+                  animationDelay: `${i * 60}ms`,
+                  animationDuration: `${900 + (i % 5) * 100}ms`,
+                  opacity: 0.4 + (i % 4) * 0.15,
+                }}
+              />
+            ))}
           </div>
         </div>
+
+        <div className="relative z-10 mt-10 space-y-4 px-6">
+          <div className="flex flex-col items-end">
+            <div className="eyebrow mb-1.5 pr-1 text-[var(--paper)]/40">You</div>
+            <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[var(--paper)] px-4 py-3 text-[var(--ink)]">
+              <p className="display-serif min-h-[22px] text-lg leading-snug">
+                {transcript.trim() ? (
+                  <>
+                    {transcript}
+                    {listening ? (
+                      <span className="ml-1 inline-block h-4 w-0.5 animate-pulse bg-[var(--ink)] align-middle" />
+                    ) : null}
+                  </>
+                ) : (
+                  <span className="text-[var(--ink)]/40">Describe what you&apos;re making…</span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {micVizError ? (
+            <p className="text-center text-xs text-amber-300/90">{micVizError}</p>
+          ) : null}
+          {!speechSupported ? (
+            <p className="mx-auto max-w-[20rem] text-center text-sm text-[var(--paper)]/50">
+              Use Chrome or Edge, or open the keyboard to type.
+            </p>
+          ) : null}
+
+          {cookingTips.length > 0 && transcript.trim().length > 12 ? (
+            <div className="flex flex-col items-start">
+              <div className="mb-1.5 flex items-center gap-2 pl-1 eyebrow text-[var(--paper)]/40">
+                <span className="inline-block h-1 w-1 rounded-full bg-[var(--paper)]/60" />
+                Byte
+              </div>
+              <div className="max-w-[85%] rounded-2xl rounded-bl-sm border border-[var(--paper)]/15 bg-[var(--ink-2)] px-4 py-3 text-[var(--paper)]">
+                <ul className="display-serif space-y-2 text-[17px] leading-snug">
+                  {cookingTips.slice(0, 3).map((tip, i) => (
+                    <li key={i}>{tip}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {liveItems.length > 0 && (
+          <div className="relative z-10 mx-6 mt-8 rounded-2xl border border-[var(--paper)]/12 bg-[var(--ink-2)]/80 p-5 backdrop-blur">
+            <div className="mb-3 flex items-baseline justify-between">
+              <div className="eyebrow text-[var(--paper)]/55">Composing</div>
+              <div className="display-serif text-[22px] text-[var(--paper)]">
+                <NoirRollover value={totalCals} />
+                <span className="ml-1 font-mono text-[10px] text-[var(--paper)]/50">kcal</span>
+              </div>
+            </div>
+            <div className="divide-y divide-[var(--paper)]/10">
+              {liveItems.map((it, i) => (
+                <div key={it.id} className="flex items-baseline gap-3 py-2.5">
+                  <span className="w-5 font-mono text-[10px] text-[var(--paper)]/40">0{i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="display-serif text-[17px] leading-tight text-[var(--paper)]">{it.name}</div>
+                    <div className="mt-0.5 font-mono text-[11px] text-[var(--paper)]/50">{it.amount}</div>
+                  </div>
+                  <div className="font-mono text-xs tabular-nums text-[var(--paper)]/80">{it.calories}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="h-40 shrink-0" aria-hidden />
+      </div>
+
+      <div
+        className="pointer-events-auto fixed inset-x-0 bottom-0 z-30 border-t border-[var(--paper)]/10 bg-[var(--ink)]/95 px-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-md"
+        style={{
+          transform: sheetIn ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 520ms cubic-bezier(0.22, 1, 0.36, 1)',
+        }}
+      >
+        {bottomError ? <p className="mb-3 text-center text-sm text-red-400">{bottomError}</p> : null}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="noir-magnet flex-1 rounded-full border border-[var(--paper)]/20 py-4 font-mono text-xs uppercase tracking-[0.2em] text-[var(--paper)]/80"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onReview}
+            disabled={!transcript.trim() && liveItems.length === 0}
+            className="noir-magnet flex-1 rounded-full bg-[var(--paper)] py-4 font-mono text-xs uppercase tracking-[0.2em] text-[var(--ink)] disabled:opacity-40"
+          >
+            Review
+          </button>
+        </div>
+        <p className="mt-4 text-center font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--paper)]/40">
+          Tap orb to pause · Keyboard to type
+        </p>
       </div>
     </div>
   )

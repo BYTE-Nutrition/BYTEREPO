@@ -46,10 +46,20 @@ logger.info(
     _env_dir,
 )
 
+
+def _parse_cors_origins() -> list[str]:
+    """Comma-separated origins; strip whitespace. Default * when unset or empty."""
+    raw = (os.getenv("MEAL_PARSE_CORS_ORIGINS") or "*").strip()
+    if raw == "*":
+        return ["*"]
+    parts = [o.strip() for o in raw.split(",") if o.strip()]
+    return parts if parts else ["*"]
+
+
 app = FastAPI(title="Byte USDA meal-parse")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("MEAL_PARSE_CORS_ORIGINS", "*").split(","),
+    allow_origins=_parse_cors_origins(),
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -278,7 +278,7 @@ export async function loadStateFromCloud(userId: string): Promise<AppState | nul
       .from('user_states')
       .select('state')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
     if (error || !data) return null
     return migrateParsed(data.state as AppState)
   } catch {

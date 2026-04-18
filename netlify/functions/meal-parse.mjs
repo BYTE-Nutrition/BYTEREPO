@@ -1,5 +1,5 @@
 /**
- * Meal transcript → structured items via OpenAI Chat Completions (same as api/meal-parse.js on Vercel).
+ * Meal transcript → structured items via OpenAI Chat Completions (same as api/meal-parse.js).
  * Env: OPENAI_API_KEY, OPENAI_MEAL_PARSE_MODEL (optional)
  */
 import crypto from 'node:crypto'

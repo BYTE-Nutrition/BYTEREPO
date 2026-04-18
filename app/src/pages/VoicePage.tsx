@@ -17,6 +17,7 @@ import {
   parseMealTranscriptBestEffort,
 } from '@/lib/mealParseApi'
 import { QUICK_SUGGESTIONS, parseMealFromTranscript, sumMealItems } from '@/lib/nutrition'
+import { mealItemsHaveUsdaBacking } from '@/lib/realtimeMealContext'
 import { MEAL_LABELS, MEAL_ORDER, type MealItem, type MealSlot, type VoiceLocationState } from '@/lib/types'
 
 function parseSlot(s: string | null): MealSlot {
@@ -342,7 +343,7 @@ export function VoicePage() {
   )
 
   return (
-    <div className="min-h-full bg-[#f7f6f3] text-stone-800">
+    <div className="noir-page-enter noir-screen-root noir-surface relative min-h-full text-[var(--paper)]">
       <audio ref={realtimeAudioRef} className="hidden" playsInline autoPlay aria-hidden />
       {showImmersive && (
         <VoiceImmersiveCapture
@@ -373,11 +374,11 @@ export function VoicePage() {
       />
 
       <div className="px-6 pb-6 pt-4">
-        <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Slot</label>
+        <label className="eyebrow mb-2 block text-[var(--paper)]/55">Slot</label>
         <select
           value={slot}
           onChange={(e) => setSlot(e.target.value as MealSlot)}
-          className="mb-10 w-full rounded-xl border border-stone-200/80 bg-white/90 px-4 py-3.5 text-[15px] text-stone-900 shadow-sm focus:border-stone-300 focus:outline-none focus:ring-1 focus:ring-stone-400/25"
+          className="mb-10 w-full rounded-xl border border-[var(--line)] bg-[var(--ink-2)] px-4 py-3.5 text-[15px] text-[var(--paper)] shadow-sm focus:border-[var(--champagne)]/40 focus:outline-none focus:ring-1 focus:ring-[var(--champagne)]/25"
         >
           {MEAL_ORDER.map((s) => (
             <option key={s} value={s}>
@@ -392,8 +393,8 @@ export function VoicePage() {
               <div className="relative mb-10 flex min-h-[11rem] w-full items-center justify-center">
                 {speech.listening && (
                   <>
-                    <div className="absolute h-[15rem] w-[15rem] rounded-full bg-amber-400/[0.12]" />
-                    <div className="absolute h-[12rem] w-[12rem] rounded-full bg-stone-400/10" />
+                    <div className="absolute h-[15rem] w-[15rem] rounded-full bg-[var(--champagne)]/15" />
+                    <div className="absolute h-[12rem] w-[12rem] rounded-full bg-[var(--paper)]/10" />
                   </>
                 )}
                 <button
@@ -402,20 +403,20 @@ export function VoicePage() {
                     setError(null)
                     speech.toggle()
                   }}
-                  className="relative inline-flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f7f6f3]"
+                  className="relative inline-flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--champagne)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ink)]"
                 >
                   <div
-                    className={`relative flex h-36 w-36 items-center justify-center rounded-full bg-stone-900 shadow-[0_20px_50px_-18px_rgba(0,0,0,0.35)] ${!speech.supported ? 'opacity-45' : ''}`}
+                    className={`relative flex h-36 w-36 items-center justify-center rounded-full bg-[var(--paper)] text-[var(--ink)] shadow-[0_20px_50px_-18px_rgba(0,0,0,0.45)] ${!speech.supported ? 'opacity-45' : ''}`}
                   >
-                    <Mic className="h-16 w-16 text-[#f5e6c8]" strokeWidth={1.35} />
+                    <Mic className="h-16 w-16" strokeWidth={1.35} />
                   </div>
                 </button>
               </div>
 
-              <h2 className="mb-3 max-w-[20rem] text-[17px] font-medium leading-snug tracking-tight text-stone-900">
+              <h2 className="mb-3 max-w-[20rem] text-[17px] font-medium leading-snug tracking-tight text-[var(--paper)]">
                 {speech.listening ? 'Listening…' : speech.supported ? 'Tap the mic to speak' : 'Dictation unavailable'}
               </h2>
-              <p className="max-w-[19rem] text-sm leading-relaxed text-stone-500">
+              <p className="max-w-[19rem] text-sm leading-relaxed text-[var(--paper)]/55">
                 {speech.supported
                   ? 'Describe ingredients and portions. Edit the text anytime.'
                   : 'Use Chrome or Edge, or type below.'}
@@ -423,32 +424,30 @@ export function VoicePage() {
             </div>
 
             <div className="mb-6">
-              <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">
-                Description
-              </label>
+              <label className="eyebrow mb-2 block text-[var(--paper)]/55">Description</label>
               <textarea
                 value={transcriptForDisplay}
                 onChange={(e) => speech.setTranscriptManual(e.target.value)}
                 rows={5}
                 placeholder="Grilled salmon, rice, and greens…"
-                className="min-h-36 w-full rounded-2xl border border-stone-200/80 bg-white/90 p-5 text-[17px] leading-relaxed text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-stone-300 focus:outline-none focus:ring-1 focus:ring-stone-400/25"
+                className="min-h-36 w-full rounded-2xl border border-[var(--line)] bg-[var(--ink-2)] p-5 text-[17px] leading-relaxed text-[var(--paper)] shadow-sm placeholder:text-[var(--paper)]/35 focus:border-[var(--champagne)]/40 focus:outline-none focus:ring-1 focus:ring-[var(--champagne)]/25"
               />
             </div>
 
-            {error && <p className="mb-6 text-sm leading-relaxed text-red-600/90">{error}</p>}
+            {error && <p className="mb-6 text-sm leading-relaxed text-red-400">{error}</p>}
 
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="flex-1 rounded-2xl border border-stone-300/80 bg-white/70 py-4 text-[15px] font-medium text-stone-700"
+                className="noir-magnet flex-1 rounded-full border border-[var(--line-strong)] py-4 font-mono text-xs uppercase tracking-[0.18em] text-[var(--paper)]"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => void handleAnalyze()}
-                className="flex-1 rounded-2xl bg-stone-900 py-4 text-[15px] font-medium text-[#f5e6c8] transition-colors hover:bg-stone-800"
+                className="noir-magnet flex-1 rounded-full bg-[var(--paper)] py-4 font-mono text-xs uppercase tracking-[0.18em] text-[var(--ink)]"
               >
                 Review
               </button>
@@ -459,72 +458,87 @@ export function VoicePage() {
         {step === 'confirm' && previewItems && (
           <div className="space-y-8">
             <div>
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Almost there</p>
-              <h3 className="text-[1.25rem] font-medium tracking-tight text-stone-900">Does this look right?</h3>
-              <p className="mt-3 text-sm leading-relaxed text-stone-500">
+              <p className="eyebrow mb-2 text-[var(--paper)]/55">Almost there</p>
+              <h3 className="display-serif text-[1.35rem] tracking-tight text-[var(--paper)]">
+                Does this <span className="noir-shimmer-on-dark">look right?</span>
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-[var(--paper)]/55">
                 {previewSource === 'local'
                   ? 'These numbers use Byte’s offline keyword list—not the full USDA meal parser—unless meal-parse is connected and succeeds.'
-                  : previewItems.some((i) => i.fdcId || i.nutritionSource === 'usda')
+                  : mealItemsHaveUsdaBacking(previewItems)
                     ? 'Calories scale to each portion below. USDA-backed lines use official reference servings—if the portion is wrong, edit your description to be more specific (cups, bowls, or “whole can”).'
-                    : 'Estimates from your words—you can go back and adjust anytime.'}
+                    : 'Meal-parse returned these lines, but they are not USDA FoodData Central rows—macros are model estimates unless you use the USDA-backed meal-parse server.'}
               </p>
               {previewSource === 'local' ? (
-                <div className="mt-4 rounded-xl border border-amber-200/90 bg-amber-50/95 px-4 py-3 text-[13px] leading-relaxed text-amber-950">
-                  <p className="font-medium">USDA meal-parse did not supply this breakdown</p>
-                  <p className="mt-1 text-amber-950/90">
+                <div className="mt-4 rounded-xl border border-[var(--champagne)]/35 bg-[var(--ink-2)] px-4 py-3 text-[13px] leading-relaxed text-[var(--paper)]/90">
+                  <p className="font-medium text-[var(--champagne)]">USDA meal-parse did not supply this breakdown</p>
+                  <p className="mt-1 text-[var(--paper)]/80">
                     {getMealParseUrl()
                       ? 'The server may be down, timed out, or returned no items—so only foods that match a short built-in list appear.'
                       : 'Point the app at your meal-parse server (VITE_MEAL_PARSE_URL, e.g. /meal-parse via Vite proxy) so every ingredient can be extracted and scaled.'}
                   </p>
                   {previewMultiFoodMismatch ? (
-                    <p className="mt-2 font-medium text-amber-950">
+                    <p className="mt-2 font-medium text-[var(--paper)]">
                       Your description sounds like several foods, but only one line matched locally. Edit the text or fix meal-parse, then tap Review again.
                     </p>
                   ) : null}
                 </div>
               ) : null}
+              {previewSource === 'api' && !mealItemsHaveUsdaBacking(previewItems) ? (
+                <div className="mt-4 rounded-xl border border-[var(--champagne)]/35 bg-[var(--ink-2)] px-4 py-3 text-[13px] leading-relaxed text-[var(--paper)]/90">
+                  <p className="font-medium text-[var(--champagne)]">Not USDA-backed data</p>
+                  <p className="mt-1 text-[var(--paper)]/80">
+                    Your current meal-parse URL (for example <code className="rounded bg-[var(--ink-3)] px-1 font-mono text-[11px]">/meal-parse</code> via{' '}
+                    <code className="rounded bg-[var(--ink-3)] px-1 font-mono text-[11px]">realtime-proxy</code> or Netlify) uses OpenAI estimates. USDA rows show a
+                    database tag and an FDC id when the Python meal-parse service is configured—see{' '}
+                    <span className="whitespace-nowrap font-mono text-[11px] text-[var(--paper)]/70">docs/NETLIFY_DEPLOY.md</span>.
+                  </p>
+                </div>
+              ) : null}
               {committedTranscript ? (
-                <p className="mt-3 rounded-xl border border-stone-200/80 bg-white/60 px-4 py-3 text-[13px] leading-relaxed text-stone-600">
-                  <span className="font-medium text-stone-500">You described </span>
-                  <span className="text-stone-800">&ldquo;{committedTranscript}&rdquo;</span>
+                <p className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--ink-2)] px-4 py-3 text-[13px] leading-relaxed text-[var(--paper)]/80">
+                  <span className="font-medium text-[var(--paper)]/50">You described </span>
+                  <span className="text-[var(--paper)]">&ldquo;{committedTranscript}&rdquo;</span>
                 </p>
               ) : null}
             </div>
-            <ul className="divide-y divide-stone-200/80 border-y border-stone-200/80">
+            <ul className="divide-y divide-[var(--line-soft)] border-y border-[var(--line)]">
               {previewItems.map((i) => {
                 const usdaBacked = i.nutritionSource === 'usda' || (typeof i.fdcId === 'number' && i.fdcId > 0)
                 return (
-                  <li key={i.id} className="space-y-1 py-3.5 text-[15px] text-stone-800">
+                  <li key={i.id} className="space-y-1 py-3.5 text-[15px] text-[var(--paper)]">
                     <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
-                      <span className="min-w-0 font-medium leading-snug">{i.name}</span>
-                      <span className="shrink-0 tabular-nums text-stone-500">{i.calories} kcal</span>
+                      <span className="display-serif min-w-0 text-lg leading-snug">{i.name}</span>
+                      <span className="shrink-0 font-mono tabular-nums text-[var(--paper)]/55">{i.calories} kcal</span>
                     </div>
-                    {i.amount ? <p className="text-[13px] leading-snug text-stone-500">{i.amount}</p> : null}
+                    {i.amount ? <p className="font-mono text-[13px] leading-snug text-[var(--paper)]/50">{i.amount}</p> : null}
                     {usdaBacked && typeof i.fdcId === 'number' && i.fdcId > 0 ? (
-                      <p className="text-[12px] text-stone-400">
+                      <p className="text-[12px] text-[var(--paper)]/40">
                         <a
                           href={`https://fdc.nal.usda.gov/food-details/${i.fdcId}/nutrients`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-medium text-stone-600 underline decoration-stone-300 underline-offset-2 hover:text-stone-800"
+                          className="font-medium text-[var(--champagne)] underline decoration-[var(--line)] underline-offset-2 hover:text-[var(--paper)]"
                         >
                           USDA FoodData Central
                         </a>
-                        <span className="text-stone-400"> · reference #{i.fdcId}</span>
+                        <span> · reference #{i.fdcId}</span>
                       </p>
                     ) : usdaBacked ? (
-                      <p className="text-[12px] text-stone-400">USDA-backed estimate</p>
+                      <p className="text-[12px] text-[var(--paper)]/40">USDA-backed estimate</p>
                     ) : null}
                   </li>
                 )
               })}
             </ul>
-            <div className="border-b border-stone-200/80 py-6 text-center">
-              <p className="text-3xl font-light tabular-nums text-stone-900">
+            <div className="border-b border-[var(--line)] py-6 text-center">
+              <p className="display-serif text-4xl tabular-nums text-[var(--paper)]">
                 {previewTotals?.calories ?? 0}
-                <span className="ml-2 text-base font-normal tracking-normal text-stone-500">kcal total</span>
+                <span className="ml-2 font-mono text-sm font-normal tracking-normal text-[var(--paper)]/50">
+                  kcal total
+                </span>
               </p>
-              <p className="mt-4 text-xs tabular-nums text-stone-400">
+              <p className="mt-4 font-mono text-xs tabular-nums text-[var(--paper)]/45">
                 P {previewTotals?.protein ?? 0}g · C {previewTotals?.carbs ?? 0}g · F {previewTotals?.fat ?? 0}g
               </p>
             </div>
@@ -532,17 +546,17 @@ export function VoicePage() {
               <button
                 type="button"
                 onClick={handleConfirmLog}
-                className="w-full rounded-2xl bg-stone-900 py-4 text-[15px] font-medium text-[#f5e6c8] hover:bg-stone-800"
+                className="noir-magnet w-full rounded-full bg-[var(--paper)] py-5 font-mono text-xs uppercase tracking-[0.22em] text-[var(--ink)]"
               >
-                Save to log
+                Plate it · save to log
               </button>
               <button
                 type="button"
                 onClick={handleEditDescription}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-stone-300/80 bg-white/70 py-3.5 text-sm font-medium text-stone-700"
+                className="noir-magnet flex w-full items-center justify-center gap-2 rounded-full border border-[var(--line-strong)] py-4 font-mono text-xs uppercase tracking-[0.2em] text-[var(--paper)]"
               >
-                <Pencil className="h-4 w-4 text-stone-400" aria-hidden />
-                Edit description
+                <Pencil className="h-4 w-4 text-[var(--paper)]/50" aria-hidden />
+                Re-describe
               </button>
             </div>
           </div>
@@ -552,17 +566,17 @@ export function VoicePage() {
       {step === 'listen' && (
         <>
           <div className="px-6 pb-8">
-            <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">Suggestions</p>
-            <ul className="divide-y divide-stone-200/80 border-y border-stone-200/80">
+            <p className="eyebrow mb-4 text-[var(--paper)]/55">Suggestions</p>
+            <ul className="divide-y divide-[var(--line-soft)] border-y border-[var(--line)]">
               {QUICK_SUGGESTIONS.map((suggestion) => (
                 <li key={suggestion}>
                   <button
                     type="button"
                     onClick={() => applySuggestion(suggestion)}
-                    className="flex w-full items-center justify-between gap-3 py-4 text-left text-[15px] text-stone-800 transition-colors active:bg-stone-200/25"
+                    className="flex w-full items-center justify-between gap-3 py-4 text-left text-[15px] text-[var(--paper)] transition-colors active:bg-[var(--paper)]/5"
                   >
                     <span className="min-w-0 flex-1 leading-snug">{suggestion}</span>
-                    <Plus className="h-4 w-4 shrink-0 text-stone-300" strokeWidth={1.75} />
+                    <Plus className="h-4 w-4 shrink-0 text-[var(--paper)]/30" strokeWidth={1.75} />
                   </button>
                 </li>
               ))}
@@ -570,8 +584,8 @@ export function VoicePage() {
           </div>
 
           <div className="px-6 pb-28">
-            <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">How it works</p>
-            <div className="space-y-4 text-sm leading-relaxed text-stone-600">
+            <p className="eyebrow mb-4 text-[var(--paper)]/55">How it works</p>
+            <div className="space-y-4 text-sm leading-relaxed text-[var(--paper)]/55">
               <p>Speak like you’re texting a friend who’s helping in the kitchen.</p>
               <p>Byte turns that into ingredients and numbers—you stay in control.</p>
               <p>Review once, then it’s on your log.</p>

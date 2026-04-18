@@ -1,5 +1,5 @@
 /**
- * OpenAI Realtime WebRTC SDP relay (same contract as api/realtime/session.js on Vercel).
+ * OpenAI Realtime WebRTC SDP relay (same contract as api/realtime/session.js).
  * Env: OPENAI_API_KEY (required), OPENAI_REALTIME_MODEL, OPENAI_REALTIME_VOICE, BYTE_REALTIME_INSTRUCTIONS
  */
 const DEFAULT_BYTE_INSTRUCTIONS = `You are Byte, an AI nutrition coach that helps users track what they're cooking in real time. Your job is to:

@@ -3,27 +3,48 @@ import type { MealItem } from '@/lib/types'
 
 const MAX_TRANSCRIPT = 1200
 
-/** True when the app is configured to call the meal-parse backend (often USDA-backed). */
+/** True when `VITE_MEAL_PARSE_URL` is set (meal-parse HTTP is enabled — may still be model-only, not USDA). */
 export function mealParsePipelineConfigured(): boolean {
   const raw = import.meta.env.VITE_MEAL_PARSE_URL?.trim()
   return Boolean(raw)
 }
 
+/** True when at least one line came from USDA FoodData Central (fdc id or explicit source tag). */
+export function mealItemsHaveUsdaBacking(items: MealItem[]): boolean {
+  return items.some(
+    (i) => i.nutritionSource === 'usda' || (typeof i.fdcId === 'number' && Number.isFinite(i.fdcId) && i.fdcId > 0),
+  )
+}
+
 /**
  * Text block injected into OpenAI Realtime instructions so spoken answers can
  * reference the same numbers the log UI uses.
+ *
+ * @param mealParseUrlConfigured same idea as {@link mealParsePipelineConfigured()} (URL set vs local-only).
  */
 export function buildAssistantMealContextFromLive(
   items: MealItem[],
   transcript: string,
-  usdaPipelineConfigured: boolean,
+  mealParseUrlConfigured: boolean,
 ): string {
   const t = transcript.trim()
   const shortTranscript = t.length > MAX_TRANSCRIPT ? `${t.slice(0, MAX_TRANSCRIPT)}…` : t || '(empty)'
 
-  const sourceLine = usdaPipelineConfigured
-    ? 'Source: line items are produced by the app meal-parse service (typically USDA FoodData Central search + scaling when the server is set up).'
-    : 'Source: line items are local heuristic estimates only (meal-parse URL not set in this build).'
+  const hasUsda = mealItemsHaveUsdaBacking(items)
+  let sourceLine: string
+  if (!mealParseUrlConfigured) {
+    sourceLine =
+      'Source: line items are local heuristic estimates only (meal-parse URL not set in this build).'
+  } else if (!items.length) {
+    sourceLine =
+      'Source: meal-parse URL is set but there are no line items yet; do not claim USDA numbers until rows show fdcId or nutritionSource usda.'
+  } else if (hasUsda) {
+    sourceLine =
+      'Source: at least some line items are USDA FoodData Central-backed (fdcId and/or nutritionSource usda).'
+  } else {
+    sourceLine =
+      'Source: line items came from the meal-parse API but are model estimates only (no USDA fdcId / usda markers on these rows).'
+  }
 
   if (!items.length) {
     return [

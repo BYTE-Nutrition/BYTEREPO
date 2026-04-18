@@ -1,4 +1,4 @@
-# API routes → Netlify Functions (same paths as Vite dev proxy / old Vercel api/)
+# API routes → Netlify Functions (same paths as the Vite dev proxy to realtime-proxy)
 /realtime/session  /.netlify/functions/realtime-session  200
 /meal-parse        /.netlify/functions/meal-parse        200
 # SPA fallback (must be last)
