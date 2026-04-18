@@ -8,6 +8,7 @@
 [build.environment]
   NODE_VERSION = "22"
 
+# With base = "app", this path is resolved from app/ — use ../ so functions live at repo root.
 [functions]
-  directory = "netlify/functions"
+  directory = "../netlify/functions"
   node_bundler = "esbuild"

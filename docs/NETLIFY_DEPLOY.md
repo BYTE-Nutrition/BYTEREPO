@@ -67,3 +67,33 @@ If the Python service is deployed (e.g. `https://byterepo.onrender.com`):
 - **Meal parse (USDA):** `VITE_MEAL_PARSE_URL` → full Render URL → FastAPI on Render.
 
 They are separate; connecting parsed items into the live coach is optional app logic, not something Render does automatically.
+
+---
+
+## 4. Troubleshooting
+
+### `POST /realtime/session` → **404** (or HTML “Page not found”)
+
+Usually **Netlify did not bundle any functions** because `[build] base = "app"` makes `[functions] directory` **relative to `app/`** — `netlify/functions` was wrong (it looked for `app/netlify/functions`). This repo uses **`directory = "../netlify/functions"`** in [`netlify.toml`](../netlify.toml) so functions are picked up from the **repo root**. After fixing, **redeploy** and check the deploy log for lines like **“Packaging Functions from …”** listing `realtime-session` and `meal-parse`.
+
+### Supabase **`…/rest/v1/user_states` → 404**
+
+The **`user_states`** table is missing or not exposed. In **Supabase → SQL Editor**, run:
+
+```sql
+create table if not exists public.user_states (
+  id uuid references auth.users on delete cascade primary key,
+  state jsonb not null,
+  updated_at timestamptz default now()
+);
+
+alter table public.user_states enable row level security;
+
+drop policy if exists "Users can manage their own state" on public.user_states;
+create policy "Users can manage their own state"
+  on public.user_states for all
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+```
+
+Then retry the app (no redeploy needed on Netlify for this part).
