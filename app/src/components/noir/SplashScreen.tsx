@@ -37,7 +37,7 @@ export function SplashScreen({ onDone }: Props) {
           className="noir-logo-reveal mt-5 font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--paper)]/45"
           style={{ animationDelay: '500ms' }}
         >
-          A cooking intelligence
+          Your cooking assistance
         </div>
       </div>
 

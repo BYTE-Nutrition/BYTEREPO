@@ -29,7 +29,7 @@ function SplashScreen({ onDone }) {
           </div>
         </div>
         <div className="mt-5 font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--paper)]/45 logo-reveal" style={{animationDelay:'500ms'}}>
-          A cooking intelligence
+          Your cooking assistance
         </div>
       </div>
 
