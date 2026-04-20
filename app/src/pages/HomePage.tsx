@@ -139,6 +139,55 @@ export function HomePage() {
               }
             />
           </div>
+          <div className="mt-5 flex justify-around">
+            {(
+              [
+                { label: 'Protein', value: totals.protein, goal: goals.proteinGoal },
+                { label: 'Carbs', value: totals.carbs, goal: goals.carbsGoal },
+                { label: 'Fat', value: totals.fat, goal: goals.fatGoal },
+              ] as const
+            ).map(({ label, value, goal }) => {
+              const pct = goal > 0 ? Math.min(1, value / goal) : 0
+              const r = 20
+              const circ = 2 * Math.PI * r
+              const offset = circ * (1 - pct)
+              return (
+                <div key={label} className="flex flex-col items-center gap-2">
+                  <div className="relative h-[52px] w-[52px]">
+                    <svg width={52} height={52} className="-rotate-90" aria-hidden>
+                      <circle
+                        cx={26}
+                        cy={26}
+                        r={r}
+                        fill="none"
+                        stroke="var(--line-soft)"
+                        strokeWidth={2}
+                      />
+                      <circle
+                        cx={26}
+                        cy={26}
+                        r={r}
+                        fill="none"
+                        stroke="var(--paper)"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeDasharray={circ}
+                        strokeDashoffset={offset}
+                        style={{ transition: 'stroke-dashoffset 600ms cubic-bezier(0.22,1,0.36,1)' }}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="font-mono text-[10px] tabular-nums leading-none text-[var(--paper)]">
+                        {Math.round(value)}
+                      </span>
+                      <span className="font-mono text-[7px] leading-none text-[var(--paper)]/40">g</span>
+                    </div>
+                  </div>
+                  <span className="eyebrow text-[9px] text-[var(--paper)]/55">{label}</span>
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         <div className="mb-8">
@@ -224,9 +273,6 @@ export function HomePage() {
           </div>
         </div>
 
-        <p className="mt-12 pb-4 text-center font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--paper)]/45">
-          Protein {Math.round(totals.protein)}g · Carbs {Math.round(totals.carbs)}g · Fat {Math.round(totals.fat)}g
-        </p>
       </div>
     </div>
   )
