@@ -18,8 +18,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const hideNav = isLanding || isOnboarding || isSignIn || isVoice
   /** Main app: centered phone-sized column on desktop; `transform` traps `position:fixed` (nav, immersive voice). */
   const phoneFrame = !isLanding && !isOnboarding && !isSignIn
-  /** Landing + sign-in use the same noir phone chrome as the rest of the app. */
-  const authSplashShell = isLanding || isSignIn
+  /** Landing, sign-in, and onboarding use the same noir phone chrome as the rest of the app. */
+  const authSplashShell = isLanding || isSignIn || isOnboarding
   const noirDeviceShell = phoneFrame || authSplashShell
 
   // Redirect to sign-in if not authenticated (after initial session check). Allow `/` so splash can run.
@@ -38,7 +38,6 @@ export function Layout({ children }: { children: ReactNode }) {
     <div
       className={cn(
         'min-h-svh',
-        isOnboarding && 'bg-[#f7f6f3]',
         noirDeviceShell &&
           'bg-[#0a0a0a] md:flex md:min-h-svh md:items-center md:justify-center md:bg-[#111] md:p-5 md:pt-8 md:pb-8',
       )}

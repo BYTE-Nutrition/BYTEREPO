@@ -6,6 +6,7 @@ import type {
   MealItem,
   MealLog,
   MealSlot,
+  DietaryRestriction,
   UserGoal,
   UserProfile,
   UserSex,
@@ -40,6 +41,19 @@ function normalizePace(p: unknown): GoalPace {
   return typeof p === 'string' && GOAL_PACES.includes(p as GoalPace) ? (p as GoalPace) : 'steady'
 }
 
+const DIETARY: DietaryRestriction[] = [
+  'none',
+  'vegetarian',
+  'vegan',
+  'kosher',
+  'pescatarian',
+  'other',
+]
+
+function normalizeDietary(d: unknown): DietaryRestriction {
+  return typeof d === 'string' && DIETARY.includes(d as DietaryRestriction) ? (d as DietaryRestriction) : 'none'
+}
+
 const defaultProfile: UserProfile = {
   name: '',
   age: 30,
@@ -49,6 +63,8 @@ const defaultProfile: UserProfile = {
   cooksPerWeek: 4,
   goal: 'maintenance',
   goalPace: 'steady',
+  dietaryRestriction: 'none',
+  dietaryNotes: '',
 }
 
 function defaultGoalsFromProfile(p: UserProfile) {
@@ -199,6 +215,8 @@ export function createInitialState(): AppState {
     cooksPerWeek: 5,
     goal: 'maintenance',
     goalPace: 'steady',
+    dietaryRestriction: 'none',
+    dietaryNotes: '',
   }
 
   return {
@@ -221,6 +239,8 @@ function migrateParsed(parsed: AppState): AppState {
     next.profile = { ...defaultProfile }
   } else {
     const p = next.profile as Partial<UserProfile> & { name?: string }
+    const notes =
+      typeof p.dietaryNotes === 'string' ? p.dietaryNotes.slice(0, 2000) : ''
     next.profile = {
       name: typeof p.name === 'string' ? p.name : '',
       age: typeof p.age === 'number' && p.age >= 13 ? p.age : 30,
@@ -235,6 +255,8 @@ function migrateParsed(parsed: AppState): AppState {
           : 4,
       goal: normalizeGoal(p.goal),
       goalPace: normalizePace(p.goalPace),
+      dietaryRestriction: normalizeDietary(p.dietaryRestriction),
+      dietaryNotes: notes,
     }
   }
   return next

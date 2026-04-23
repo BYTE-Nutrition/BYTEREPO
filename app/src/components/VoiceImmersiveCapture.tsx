@@ -1,12 +1,17 @@
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Keyboard, X } from 'lucide-react'
 import { NoirMealSlotRail, NoirRollover, NoirStatusBar } from '@/components/noir/NoirPrimitives'
 import type { MealItem, MealSlot } from '@/lib/types'
+import type { VoiceTranscriptMessage } from '@/lib/voiceTranscript'
 
 type Props = {
   slot: MealSlot
   onSlotChange: (s: MealSlot) => void
+  /** Full user text for meal-parse hints, Review, and cooking tips. */
   transcript: string
+  /** Discrete turns for the chat transcript (Realtime or a single synthetic user line for Web Speech). */
+  messages: VoiceTranscriptMessage[]
+  assistantSpeaking: boolean
   listening: boolean
   speechSupported: boolean
   /** When set, replaces the default listening / mic hint line */
@@ -20,12 +25,65 @@ type Props = {
   onReview: () => void
   onUseKeyboard: () => void
   bottomError: string | null
+  /** Shown when remote WebRTC audio could not autoplay (browser policy). */
+  soundUnlockHint?: string | null
+  onSoundUnlock?: () => void
 }
 
-export function VoiceImmersiveCapture({
+const VoiceChatRow = memo(function VoiceChatRow({
+  message,
+  showUserCursor,
+}: {
+  message: VoiceTranscriptMessage
+  showUserCursor: boolean
+}) {
+  const isUser = message.role === 'user'
+  const streaming = message.status === 'streaming'
+  const showText = message.text.trim().length > 0 || !streaming
+
+  return (
+    <div
+      className={`noir-voice-msg-enter flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
+      aria-live={message.role === 'assistant' && streaming ? 'polite' : undefined}
+    >
+      <div className={`eyebrow mb-1.5 ${isUser ? 'pr-1 text-[var(--paper)]/40' : 'pl-1 text-[var(--paper)]/40'}`}>
+        {isUser ? 'You' : 'Byte'}
+      </div>
+      <div
+        className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+          isUser
+            ? 'rounded-br-sm bg-[var(--paper)] text-[var(--ink)]'
+            : 'rounded-bl-sm border border-[var(--paper)]/15 bg-[var(--ink-2)] text-[var(--paper)]'
+        }`}
+      >
+        <p className="display-serif min-h-[22px] text-lg leading-snug">
+          {showText ? (
+            <>
+              {message.text}
+              {isUser && streaming && showUserCursor ? (
+                <span className="ml-1 inline-block h-4 w-0.5 animate-pulse bg-[var(--ink)] align-middle" />
+              ) : null}
+              {!isUser && streaming && !message.text.trim() ? (
+                <span className="text-[var(--paper)]/35">…</span>
+              ) : null}
+            </>
+          ) : (
+            <span className={isUser ? 'text-[var(--ink)]/40' : 'text-[var(--paper)]/35'}>
+              {isUser ? 'Listening…' : '…'}
+            </span>
+          )}
+        </p>
+      </div>
+    </div>
+  )
+})
+
+export const VoiceImmersiveCapture = memo(function VoiceImmersiveCapture({
   slot,
   onSlotChange,
   transcript,
+  messages,
+  assistantSpeaking,
   listening,
   speechSupported,
   statusLine,
@@ -38,8 +96,12 @@ export function VoiceImmersiveCapture({
   onReview,
   onUseKeyboard,
   bottomError,
+  soundUnlockHint,
+  onSoundUnlock,
 }: Props) {
   const [sheetIn, setSheetIn] = useState(false)
+  const endRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       requestAnimationFrame(() => setSheetIn(true))
@@ -47,9 +109,22 @@ export function VoiceImmersiveCapture({
     return () => cancelAnimationFrame(id)
   }, [])
 
+  const scrollTailKey =
+    messages.length === 0
+      ? ''
+      : `${messages[messages.length - 1]?.id}:${messages[messages.length - 1]?.text.length}:${messages[messages.length - 1]?.status}`
+
+  useLayoutEffect(() => {
+    endRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' })
+  }, [scrollTailKey, messages.length])
+
   const orbScale = 1 + audioLevel * 0.18
   const orbRingOpacity = 0.25 + audioLevel * 0.45
   const totalCals = liveItems.reduce((a, i) => a + i.calories, 0)
+
+  const last = messages[messages.length - 1]
+  const composing =
+    assistantSpeaking || (last?.role === 'assistant' && last.status === 'streaming')
 
   return (
     <div className="byte-noir fixed inset-0 z-50 flex flex-col overflow-hidden bg-[var(--ink)] text-[var(--paper)]">
@@ -92,8 +167,8 @@ export function VoiceImmersiveCapture({
         />
       </div>
 
-      <div className="noir-canvas-bg noir-grain relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div className="relative z-10 flex flex-col items-center pt-[90px]">
+      <div className="noir-canvas-bg noir-grain relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="relative z-10 flex shrink-0 flex-col items-center pt-[90px]">
           <div className="absolute left-5 top-[170px] z-20">
             <NoirMealSlotRail slot={slot} onSlotChange={onSlotChange} />
           </div>
@@ -133,7 +208,7 @@ export function VoiceImmersiveCapture({
           </div>
 
           <div className="mt-10 eyebrow text-[var(--paper)]/60">
-            {transcript.trim() ? 'Byte is composing' : statusLine ?? 'Byte is listening'}
+            {composing ? 'Byte is composing' : transcript.trim() ? 'You’re on mic' : statusLine ?? 'Byte is listening'}
           </div>
 
           <div className="mt-5 flex h-8 items-center gap-[3px] text-[var(--paper)]">
@@ -151,53 +226,57 @@ export function VoiceImmersiveCapture({
           </div>
         </div>
 
-        <div className="relative z-10 mt-10 space-y-4 px-6">
-          <div className="flex flex-col items-end">
-            <div className="eyebrow mb-1.5 pr-1 text-[var(--paper)]/40">You</div>
-            <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[var(--paper)] px-4 py-3 text-[var(--ink)]">
-              <p className="display-serif min-h-[22px] text-lg leading-snug">
-                {transcript.trim() ? (
-                  <>
-                    {transcript}
-                    {listening ? (
-                      <span className="ml-1 inline-block h-4 w-0.5 animate-pulse bg-[var(--ink)] align-middle" />
-                    ) : null}
-                  </>
-                ) : (
-                  <span className="text-[var(--ink)]/40">Describe what you&apos;re making…</span>
-                )}
+        <div className="relative z-10 mt-6 min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="space-y-4 pb-4">
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-end">
+                <div className="eyebrow mb-1.5 pr-1 text-[var(--paper)]/40">You</div>
+                <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[var(--paper)] px-4 py-3 text-[var(--ink)]">
+                  <p className="display-serif min-h-[22px] text-lg leading-snug text-[var(--ink)]/40">
+                    Describe what you&apos;re making…
+                  </p>
+                </div>
+              </div>
+            ) : (
+              messages.map((m) => (
+                <VoiceChatRow
+                  key={m.id}
+                  message={m}
+                  showUserCursor={listening && m.role === 'user' && m.status === 'streaming'}
+                />
+              ))
+            )}
+
+            {micVizError ? (
+              <p className="text-center text-xs text-amber-300/90">{micVizError}</p>
+            ) : null}
+            {!speechSupported ? (
+              <p className="mx-auto max-w-[20rem] text-center text-sm text-[var(--paper)]/50">
+                Use Chrome or Edge, or open the keyboard to type.
               </p>
-            </div>
+            ) : null}
+
+            {cookingTips.length > 0 && transcript.trim().length > 12 ? (
+              <div className="flex flex-col items-start">
+                <div className="mb-1.5 flex items-center gap-2 pl-1 eyebrow text-[var(--paper)]/40">
+                  <span className="inline-block h-1 w-1 rounded-full bg-[var(--paper)]/60" />
+                  Tips
+                </div>
+                <div className="max-w-[85%] rounded-2xl rounded-bl-sm border border-[var(--paper)]/15 bg-[var(--ink-2)] px-4 py-3 text-[var(--paper)]">
+                  <ul className="display-serif space-y-2 text-[17px] leading-snug">
+                    {cookingTips.slice(0, 3).map((tip, i) => (
+                      <li key={i}>{tip}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ) : null}
+            <div ref={endRef} className="h-px w-full shrink-0" aria-hidden />
           </div>
-
-          {micVizError ? (
-            <p className="text-center text-xs text-amber-300/90">{micVizError}</p>
-          ) : null}
-          {!speechSupported ? (
-            <p className="mx-auto max-w-[20rem] text-center text-sm text-[var(--paper)]/50">
-              Use Chrome or Edge, or open the keyboard to type.
-            </p>
-          ) : null}
-
-          {cookingTips.length > 0 && transcript.trim().length > 12 ? (
-            <div className="flex flex-col items-start">
-              <div className="mb-1.5 flex items-center gap-2 pl-1 eyebrow text-[var(--paper)]/40">
-                <span className="inline-block h-1 w-1 rounded-full bg-[var(--paper)]/60" />
-                Byte
-              </div>
-              <div className="max-w-[85%] rounded-2xl rounded-bl-sm border border-[var(--paper)]/15 bg-[var(--ink-2)] px-4 py-3 text-[var(--paper)]">
-                <ul className="display-serif space-y-2 text-[17px] leading-snug">
-                  {cookingTips.slice(0, 3).map((tip, i) => (
-                    <li key={i}>{tip}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          ) : null}
         </div>
 
         {liveItems.length > 0 && (
-          <div className="relative z-10 mx-6 mt-8 rounded-2xl border border-[var(--paper)]/12 bg-[var(--ink-2)]/80 p-5 backdrop-blur">
+          <div className="relative z-10 mx-6 mt-4 shrink-0 rounded-2xl border border-[var(--paper)]/12 bg-[var(--ink-2)]/80 p-5 backdrop-blur">
             <div className="mb-3 flex items-baseline justify-between">
               <div className="eyebrow text-[var(--paper)]/55">Composing</div>
               <div className="display-serif text-[22px] text-[var(--paper)]">
@@ -220,7 +299,7 @@ export function VoiceImmersiveCapture({
           </div>
         )}
 
-        <div className="h-40 shrink-0" aria-hidden />
+        <div className="h-24 shrink-0" aria-hidden />
       </div>
 
       <div
@@ -230,6 +309,20 @@ export function VoiceImmersiveCapture({
           transition: 'transform 520ms cubic-bezier(0.22, 1, 0.36, 1)',
         }}
       >
+        {soundUnlockHint ? (
+          <div className="mb-3 flex flex-col items-center gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3">
+            <p className="text-center text-sm text-amber-100/90">{soundUnlockHint}</p>
+            {onSoundUnlock ? (
+              <button
+                type="button"
+                onClick={onSoundUnlock}
+                className="rounded-full border border-amber-400/50 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-amber-100/95"
+              >
+                Enable sound
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         {bottomError ? <p className="mb-3 text-center text-sm text-red-400">{bottomError}</p> : null}
         <div className="flex gap-3">
           <button
@@ -254,4 +347,4 @@ export function VoiceImmersiveCapture({
       </div>
     </div>
   )
-}
+})

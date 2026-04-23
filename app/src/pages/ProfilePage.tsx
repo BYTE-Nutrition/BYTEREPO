@@ -3,7 +3,16 @@ import { AppScreenHeader } from '@/components/AppScreenHeader'
 import { useAuth } from '@/context/AuthContext'
 import { useByte } from '@/context/useByte'
 import { GOAL_PACE_OPTIONS, USER_GOAL_OPTIONS } from '@/lib/goalsFromProfile'
-import type { GoalPace, UserGoal, UserSex } from '@/lib/types'
+import type { DietaryRestriction, GoalPace, UserGoal, UserSex } from '@/lib/types'
+
+const DIETARY_CHOICES: { id: DietaryRestriction; label: string }[] = [
+  { id: 'none', label: 'No restrictions' },
+  { id: 'vegetarian', label: 'Vegetarian' },
+  { id: 'vegan', label: 'Vegan' },
+  { id: 'kosher', label: 'Kosher' },
+  { id: 'pescatarian', label: 'Pescatarian' },
+  { id: 'other', label: 'Other (describe below)' },
+]
 
 const field =
   'mt-2 w-full rounded-xl border border-[var(--line)] bg-[var(--ink-2)] px-3.5 py-3 text-[15px] text-[var(--paper)] shadow-sm focus:border-[var(--champagne)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--champagne)]/30'
@@ -136,6 +145,36 @@ export function ProfilePage() {
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
+              Dietary restrictions
+              <select
+                className={field}
+                value={state.profile.dietaryRestriction}
+                onChange={(e) =>
+                  updateProfile({ dietaryRestriction: e.target.value as DietaryRestriction })
+                }
+              >
+                {DIETARY_CHOICES.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm font-medium text-[var(--paper)]/70">
+              Foods to avoid / notes
+              <textarea
+                className={`${field} min-h-24 resize-y`}
+                rows={3}
+                value={state.profile.dietaryNotes}
+                placeholder={
+                  state.profile.dietaryRestriction === 'other'
+                    ? 'Describe what you do not eat…'
+                    : 'Optional — allergies, dislikes, or other details…'
+                }
+                onChange={(e) => updateProfile({ dietaryNotes: e.target.value })}
+              />
             </label>
           </div>
         </section>

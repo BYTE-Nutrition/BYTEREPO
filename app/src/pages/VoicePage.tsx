@@ -18,6 +18,7 @@ import {
 } from '@/lib/mealParseApi'
 import { QUICK_SUGGESTIONS, parseMealFromTranscript, sumMealItems } from '@/lib/nutrition'
 import { mealItemsHaveUsdaBacking } from '@/lib/realtimeMealContext'
+import type { VoiceTranscriptMessage } from '@/lib/voiceTranscript'
 import { MEAL_LABELS, MEAL_ORDER, type MealItem, type MealSlot, type VoiceLocationState } from '@/lib/types'
 
 function parseSlot(s: string | null): MealSlot {
@@ -330,6 +331,37 @@ export function VoicePage() {
     [liveItems, transcriptForDisplay],
   )
 
+  /** Rows for the noir immersive transcript rail (Realtime uses hook transcript; Web Speech uses local dictation). */
+  const immersiveChatMessages = useMemo((): VoiceTranscriptMessage[] => {
+    if (immersiveRealtimeOn && realtime.status === 'live') {
+      const t = realtime.userTranscript.trim()
+      if (!t) return []
+      return [
+        {
+          id: 'immersive-rt-user',
+          role: 'user',
+          text: realtime.userTranscript,
+          status: 'streaming',
+          createdAt: Date.now(),
+        },
+      ]
+    }
+    if (!immersiveRealtimeOn) {
+      const t = transcriptForDisplay.trim()
+      if (!t) return []
+      return [
+        {
+          id: 'immersive-local-user',
+          role: 'user',
+          text: t,
+          status: 'streaming',
+          createdAt: Date.now(),
+        },
+      ]
+    }
+    return []
+  }, [immersiveRealtimeOn, realtime.status, realtime.userTranscript, transcriptForDisplay])
+
   const previewTotals = useMemo(
     () => (previewItems?.length ? sumMealItems(previewItems) : null),
     [previewItems],
@@ -350,6 +382,8 @@ export function VoicePage() {
           slot={slot}
           onSlotChange={setSlot}
           transcript={transcriptForDisplay}
+          messages={immersiveChatMessages}
+          assistantSpeaking={immersiveRealtimeOn ? realtime.assistantSpeaking : false}
           listening={immersiveListening}
           speechSupported={immersiveSpeechSupported}
           statusLine={immersiveStatusLine}

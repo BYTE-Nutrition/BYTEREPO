@@ -60,6 +60,15 @@ export type UserSex = 'male' | 'female' | 'prefer_not_say'
 /** How quickly you want to move toward your health goal (affects calorie adjustment). */
 export type GoalPace = 'gradual' | 'steady' | 'ambitious'
 
+/** Diet pattern / restrictions for coaching and meal suggestions. */
+export type DietaryRestriction =
+  | 'none'
+  | 'vegetarian'
+  | 'vegan'
+  | 'kosher'
+  | 'pescatarian'
+  | 'other'
+
 export interface UserProfile {
   name: string
   age: number
@@ -72,6 +81,9 @@ export interface UserProfile {
   cooksPerWeek: number
   goal: UserGoal
   goalPace: GoalPace
+  dietaryRestriction: DietaryRestriction
+  /** Free text: required when `dietaryRestriction` is `other`; optional notes (e.g. foods to avoid). */
+  dietaryNotes: string
 }
 
 export interface AppState {

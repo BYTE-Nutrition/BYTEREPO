@@ -270,6 +270,10 @@
   animation: noir-logo-reveal 1600ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.byte-noir .noir-voice-msg-enter {
+  animation: noir-slide-up 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .byte-noir .noir-page-enter,
   .byte-noir .noir-shimmer-on-dark,
@@ -287,6 +291,10 @@
     opacity: 1;
     transform: translateY(0);
     letter-spacing: -0.03em;
+  }
+
+  .byte-noir .noir-voice-msg-enter {
+    animation: none !important;
   }
 
   .byte-noir .noir-splash-bar-fill {
