@@ -24,6 +24,10 @@ type Props = {
   onClose: () => void
   onReview: () => void
   onUseKeyboard: () => void
+  /** When true, hide the orb/waveform and show a big 'Submit for breakdown' button + Resume link. */
+  paused?: boolean
+  /** Called by the paused Submit button to run meal-parse / USDA and go to the confirm step. */
+  onSubmit?: () => void
   bottomError: string | null
   /** Shown when remote WebRTC audio could not autoplay (browser policy). */
   soundUnlockHint?: string | null
@@ -97,6 +101,8 @@ export const VoiceImmersiveCapture = memo(function VoiceImmersiveCapture({
   onClose,
   onReview,
   onUseKeyboard,
+  paused = false,
+  onSubmit,
   bottomError,
   soundUnlockHint,
   onSoundUnlock,
@@ -107,14 +113,23 @@ export const VoiceImmersiveCapture = memo(function VoiceImmersiveCapture({
   const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => setSheetIn(true))
+    // Bug: cleanup only cancelled the outer rAF. If the component unmounted in
+    // the ~16ms window after the outer frame fired but before the inner one,
+    // setSheetIn(true) would run on an unmounted component (React warns + can
+    // mask leaks during fast navigation away from the immersive view). Track
+    // the inner id too and cancel both on cleanup.
+    let innerId = 0
+    const outerId = requestAnimationFrame(() => {
+      innerId = requestAnimationFrame(() => setSheetIn(true))
     })
-    return () => cancelAnimationFrame(id)
+    return () => {
+      cancelAnimationFrame(outerId)
+      if (innerId) cancelAnimationFrame(innerId)
+    }
   }, [])
 
   useEffect(() => {
-    if (!listening) return
+    if (!listening || paused) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== ' ' && e.key !== 'Spacebar' && e.key !== 'Enter') return
       const root = rootRef.current
@@ -127,7 +142,7 @@ export const VoiceImmersiveCapture = memo(function VoiceImmersiveCapture({
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [listening])
+  }, [listening, paused])
 
   const [showAll, setShowAll] = useState(false)
   const prevMessagesLenRef = useRef(messages.length)
@@ -226,66 +241,95 @@ export const VoiceImmersiveCapture = memo(function VoiceImmersiveCapture({
             <NoirMealSlotRail slot={slot} onSlotChange={onSlotChange} />
           </div>
 
-          <div className="relative h-[170px] w-[170px]">
-            <div className="noir-ring rounded-full" style={{ opacity: orbRingOpacity }} />
-            <div className="noir-ring delay-1 rounded-full" style={{ opacity: orbRingOpacity * 0.8 }} />
-            <div className="noir-ring delay-2 rounded-full" style={{ opacity: orbRingOpacity * 0.6 }} />
-            <button
-              type="button"
-              onClick={(e) => {
-                e.currentTarget.blur()
-                onToggleMic()
-              }}
-              onKeyDown={(e) => {
-                if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') {
-                  e.preventDefault()
-                }
-              }}
-              tabIndex={-1}
-              disabled={!speechSupported}
-              className="absolute inset-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--champagne)]/40 disabled:opacity-40"
-              aria-label={listening ? 'Stop listening' : 'Start listening'}
-            >
-              <span className="sr-only">{listening ? 'Stop' : 'Speak'}</span>
-            </button>
-            <div
-              className="pointer-events-none absolute inset-0 overflow-hidden rounded-full"
-              style={{
-                background: 'radial-gradient(circle at 35% 30%, #2a2a2a 0%, #141414 55%, #080808 100%)',
-                boxShadow:
-                  'inset 0 0 40px rgba(255,255,255,0.05), inset 0 -20px 50px rgba(0,0,0,0.5), 0 30px 60px -10px rgba(0,0,0,0.7)',
-                transform: `scale(${orbScale})`,
-                transition: 'transform 120ms ease-out',
-              }}
-            >
-              <div
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background:
-                    'radial-gradient(ellipse at 35% 28%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 50%)',
-                  animation: 'noir-orb-rotate 20s linear infinite',
+          {paused ? (
+            <div className="flex w-full flex-col items-center px-6">
+              <div className="eyebrow text-[var(--paper)]/60">Listening paused</div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.currentTarget.blur()
+                  onSubmit?.()
                 }}
-              />
+                disabled={!transcript.trim() && liveItems.length === 0}
+                className="noir-magnet mt-6 w-full max-w-[22rem] rounded-full bg-[var(--paper)] py-5 font-mono text-xs uppercase tracking-[0.2em] text-[var(--ink)] disabled:opacity-40"
+              >
+                Submit for breakdown
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.currentTarget.blur()
+                  onToggleMic()
+                }}
+                className="mt-5 font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--paper)]/70 underline-offset-4 hover:underline"
+              >
+                Resume listening
+              </button>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="relative h-[170px] w-[170px]">
+                <div className="noir-ring rounded-full" style={{ opacity: orbRingOpacity }} />
+                <div className="noir-ring delay-1 rounded-full" style={{ opacity: orbRingOpacity * 0.8 }} />
+                <div className="noir-ring delay-2 rounded-full" style={{ opacity: orbRingOpacity * 0.6 }} />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.currentTarget.blur()
+                    onToggleMic()
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') {
+                      e.preventDefault()
+                    }
+                  }}
+                  tabIndex={-1}
+                  disabled={!speechSupported}
+                  className="absolute inset-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--champagne)]/40 disabled:opacity-40"
+                  aria-label={listening ? 'Stop listening' : 'Start listening'}
+                >
+                  <span className="sr-only">{listening ? 'Stop' : 'Speak'}</span>
+                </button>
+                <div
+                  className="pointer-events-none absolute inset-0 overflow-hidden rounded-full"
+                  style={{
+                    background: 'radial-gradient(circle at 35% 30%, #2a2a2a 0%, #141414 55%, #080808 100%)',
+                    boxShadow:
+                      'inset 0 0 40px rgba(255,255,255,0.05), inset 0 -20px 50px rgba(0,0,0,0.5), 0 30px 60px -10px rgba(0,0,0,0.7)',
+                    transform: `scale(${orbScale})`,
+                    transition: 'transform 120ms ease-out',
+                  }}
+                >
+                  <div
+                    className="absolute inset-0 rounded-full"
+                    style={{
+                      background:
+                        'radial-gradient(ellipse at 35% 28%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 50%)',
+                      animation: 'noir-orb-rotate 20s linear infinite',
+                    }}
+                  />
+                </div>
+              </div>
 
-          <div className="mt-10 eyebrow text-[var(--paper)]/60">
-            {composing ? 'Byte is composing' : transcript.trim() ? 'You’re on mic' : statusLine ?? 'Byte is listening'}
-          </div>
+              <div className="mt-10 eyebrow text-[var(--paper)]/60">
+                {composing ? 'Byte is composing' : transcript.trim() ? 'You’re on mic' : statusLine ?? 'Byte is listening'}
+              </div>
 
-          <div className="mt-5 flex h-8 items-center gap-[3px] text-[var(--paper)]">
-            {Array.from({ length: 22 }).map((_, i) => (
-              <span
-                key={i}
-                className="noir-wave-bar h-full w-[3px]"
-                style={{
-                  animationDelay: `${i * 60}ms`,
-                  animationDuration: `${900 + (i % 5) * 100}ms`,
-                  opacity: 0.4 + (i % 4) * 0.15,
-                }}
-              />
-            ))}
-          </div>
+              <div className="mt-5 flex h-8 items-center gap-[3px] text-[var(--paper)]">
+                {Array.from({ length: 22 }).map((_, i) => (
+                  <span
+                    key={i}
+                    className="noir-wave-bar h-full w-[3px]"
+                    style={{
+                      animationDelay: `${i * 60}ms`,
+                      animationDuration: `${900 + (i % 5) * 100}ms`,
+                      opacity: 0.4 + (i % 4) * 0.15,
+                    }}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="relative z-10 mt-6 min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -348,21 +392,6 @@ export const VoiceImmersiveCapture = memo(function VoiceImmersiveCapture({
               </p>
             ) : null}
 
-            {cookingTips.length > 0 && transcript.trim().length > 12 ? (
-              <div className="flex flex-col items-start">
-                <div className="mb-1.5 flex items-center gap-2 pl-1 eyebrow text-[var(--paper)]/40">
-                  <span className="inline-block h-1 w-1 rounded-full bg-[var(--paper)]/60" />
-                  Tips
-                </div>
-                <div className="max-w-[85%] rounded-2xl rounded-bl-sm border border-[var(--paper)]/15 bg-[var(--ink-2)] px-4 py-3 text-[var(--paper)]">
-                  <ul className="display-serif space-y-2 text-[17px] leading-snug">
-                    {cookingTips.slice(0, 3).map((tip, i) => (
-                      <li key={i}>{tip}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ) : null}
             <div ref={endRef} className="h-px w-full shrink-0" aria-hidden />
           </div>
         </div>
@@ -416,25 +445,38 @@ export const VoiceImmersiveCapture = memo(function VoiceImmersiveCapture({
           </div>
         ) : null}
         {bottomError ? <p className="mb-3 text-center text-sm text-red-400">{bottomError}</p> : null}
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="noir-magnet flex-1 rounded-full border border-[var(--paper)]/20 py-4 font-mono text-xs uppercase tracking-[0.2em] text-[var(--paper)]/80"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onReview}
-            disabled={!transcript.trim() && liveItems.length === 0}
-            className="noir-magnet flex-1 rounded-full bg-[var(--paper)] py-4 font-mono text-xs uppercase tracking-[0.2em] text-[var(--ink)] disabled:opacity-40"
-          >
-            Review
-          </button>
-        </div>
+
+        {cookingTips.length > 0 && transcript.trim().length > 12 ? (
+          <div className="mb-3">
+            <div className="mb-1 flex items-center gap-2 pl-1 eyebrow text-[var(--paper)]/40">
+              <span className="inline-block h-1 w-1 rounded-full bg-[var(--paper)]/60" />
+              Tips
+            </div>
+            <div className="rounded-xl rounded-bl-sm border border-[var(--paper)]/15 bg-[var(--ink-2)] px-3 py-2 text-[var(--paper)]/90">
+              <ul className="space-y-0.5 text-[11.5px] leading-[1.35]">
+                {cookingTips.slice(0, 2).map((tip, i) => (
+                  <li key={i}>{tip}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : null}
+
+        {!paused && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={onReview}
+              disabled={!transcript.trim() && liveItems.length === 0}
+              className="noir-magnet rounded-full bg-[var(--paper)] px-14 py-4 font-mono text-xs uppercase tracking-[0.2em] text-[var(--ink)] disabled:opacity-40"
+            >
+              Review
+            </button>
+          </div>
+        )}
+
         <p className="mt-4 text-center font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--paper)]/40">
-          Tap orb to pause · Keyboard to type
+          {paused ? 'Paused · Submit or resume' : 'Tap orb to pause · Keyboard to type'}
         </p>
       </div>
     </div>

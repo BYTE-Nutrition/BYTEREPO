@@ -209,9 +209,14 @@ export function HomePage() {
                 <button
                   key={slot}
                   type="button"
-                  onClick={() =>
-                    empty ? navigate(`/voice?slot=${slot}`) : navigate(`/meals/${slot}`)
-                  }
+                  onClick={async () => {
+                    if (!empty) {
+                      navigate(`/meals/${slot}`)
+                      return
+                    }
+                    await primeMic()
+                    navigate(`/voice?slot=${slot}&capture=1`, { state: { autoStartVoice: true } })
+                  }}
                   className="group relative flex w-full items-center gap-4 py-4 text-left"
                   style={{
                     animation: `noir-slide-up 600ms cubic-bezier(0.22,1,0.36,1) both`,

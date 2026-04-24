@@ -100,14 +100,28 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
   const dcRef = useRef<RTCDataChannel | null>(null)
   const committedUserRef = useRef('')
   const segmentUserRef = useRef('')
+  // Bug: the SDP `fetch` and the awaits that follow it had no way to be cancelled.
+  // If the user closed the immersive view (or another connect() started) while the
+  // SDP exchange was in flight, the fetch would still resolve, then the code
+  // would try to setRemoteDescription on a closed pc, throw, and the catch would
+  // surface a "Voice unavailable" banner the user never caused. Track an
+  // AbortController per connect attempt so disconnect() can cancel it cleanly.
+  const connectAbortRef = useRef<AbortController | null>(null)
 
   const disconnect = useCallback(() => {
-    committedUserRef.current = ''
-    segmentUserRef.current = ''
-    setUserTranscript('')
     setAssistantSpeaking(false)
-    setConversationMessages([])
     setStatus('idle')
+    // Intentionally keep committedUserRef / segmentUserRef / userTranscript / conversationMessages
+    // so the paused "Submit for breakdown" screen still shows what the user said. `connect()`
+    // clears these just before opening a fresh session.
+
+    // Bug: in-flight SDP fetch / setRemoteDescription would resume after the pc
+    // had already been closed below, throw, and surface a spurious "Voice
+    // unavailable" error. Aborting before we null out pcRef lets connect()'s
+    // catch block detect the intentional cancellation via signal.aborted.
+    const ac = connectAbortRef.current
+    connectAbortRef.current = null
+    if (ac) ac.abort()
 
     dcRef.current = null
     const pc = pcRef.current
@@ -152,6 +166,21 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
             ? String((event.error as { message?: unknown }).message ?? 'Realtime error')
             : 'Realtime error'
         setLastError(msg)
+        // #region agent log
+        fetch('http://127.0.0.1:7630/ingest/869a58af-96c5-49f4-bbdd-a35babd1f94f', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'cb3770' },
+          body: JSON.stringify({
+            sessionId: 'cb3770',
+            runId: 'pre-fix',
+            hypothesisId: 'H1',
+            location: 'useOpenAiRealtimeVoice.ts:handleDataMessage:error-event',
+            message: 'Realtime data-channel type=error (may be non-fatal while session stays live)',
+            data: { msgLen: msg.length, msgPreview: msg.slice(0, 120) },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {})
+        // #endregion
         onError?.(msg)
         return
       }
@@ -354,6 +383,13 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
       return
     }
 
+    // Bug: calling connect() while a previous connect() was still mid-await would
+    // overwrite pcRef out from under the older invocation. The older one then
+    // continued running setLocalDescription / fetch on a peer connection the new
+    // call had already replaced, eventually throwing into its own catch and
+    // tearing down the *new* session. disconnect() above now aborts the previous
+    // attempt; we then mint a fresh AbortController for this attempt so the
+    // signal.aborted check below can distinguish "we cancelled" from "real error".
     disconnect()
     setLastError(null)
     setStatus('connecting')
@@ -361,6 +397,9 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
     segmentUserRef.current = ''
     setUserTranscript('')
     setConversationMessages([])
+
+    const ac = new AbortController()
+    connectAbortRef.current = ac
 
     let pc: RTCPeerConnection
     try {
@@ -383,6 +422,13 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
       if (!ms) {
         ms = await navigator.mediaDevices.getUserMedia({ audio: true })
       }
+      // Bug: getUserMedia is async; user could have closed the immersive view
+      // while waiting on the permission prompt. Without this guard, we'd grab
+      // the mic, attach tracks to a closed pc, and leave the mic LED on.
+      if (ac.signal.aborted || pcRef.current !== pc) {
+        ms.getTracks().forEach((t) => t.stop())
+        return
+      }
       setLocalStream(ms)
       ms.getTracks().forEach((t) => pc.addTrack(t, ms))
 
@@ -396,7 +442,9 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
       })
 
       const offer = await pc.createOffer()
+      if (ac.signal.aborted || pcRef.current !== pc) return
       await pc.setLocalDescription(offer)
+      if (ac.signal.aborted || pcRef.current !== pc) return
 
       const url = sessionUrl.trim()
       const sdpHeaders: Record<string, string> = {
@@ -407,11 +455,16 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
         sdpHeaders['X-Byte-Goals'] = goals
       }
 
+      // Bug: fetch had no AbortSignal, so closing the page mid-handshake left a
+      // dangling request that resolved into a closed pc. Threading ac.signal in
+      // here means disconnect() can short-circuit the network call immediately.
       const sdpResponse = await fetch(url, {
         method: 'POST',
         body: offer.sdp ?? '',
         headers: sdpHeaders,
+        signal: ac.signal,
       })
+      if (ac.signal.aborted || pcRef.current !== pc) return
 
       if (!sdpResponse.ok) {
         let detail = sdpResponse.statusText
@@ -442,17 +495,39 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
       }
 
       const answerSdp = await sdpResponse.text()
+      if (ac.signal.aborted || pcRef.current !== pc) return
       await pc.setRemoteDescription({
         type: 'answer',
         sdp: answerSdp,
       })
+      if (ac.signal.aborted || pcRef.current !== pc) return
 
       setStatus('live')
     } catch (e) {
+      // Bug: the catch used to fire setStatus('error') for any throw, including
+      // the AbortError raised when the user simply closed the capture mid-flight.
+      // That painted a red "Voice unavailable" banner over what was really a
+      // user-initiated cancel. Treat aborted/superseded attempts as a no-op.
+      if (ac.signal.aborted || pcRef.current !== pc) return
       disconnect()
       const msg = connectErrorMessage(e)
       setLastError(msg)
       setStatus('error')
+      // #region agent log
+      fetch('http://127.0.0.1:7630/ingest/869a58af-96c5-49f4-bbdd-a35babd1f94f', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'cb3770' },
+        body: JSON.stringify({
+          sessionId: 'cb3770',
+          runId: 'pre-fix',
+          hypothesisId: 'H4',
+          location: 'useOpenAiRealtimeVoice.ts:connect:catch',
+          message: 'connect() failed — onError invoked, status set to error',
+          data: { msgLen: msg.length, msgPreview: msg.slice(0, 120) },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {})
+      // #endregion
       onError?.(msg)
     }
   }, [audioRef, disconnect, goalsHeader, handleDataMessage, onError, sessionUrl, takePrimedStream])

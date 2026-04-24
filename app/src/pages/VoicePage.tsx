@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Mic, Pencil, Plus } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { AppScreenHeader } from '@/components/AppScreenHeader'
 import { VoiceImmersiveCapture } from '@/components/VoiceImmersiveCapture'
@@ -16,7 +16,7 @@ import {
   parseMealWithApi,
   parseMealTranscriptBestEffort,
 } from '@/lib/mealParseApi'
-import { QUICK_SUGGESTIONS, parseMealFromTranscript, sumMealItems } from '@/lib/nutrition'
+import { parseMealFromTranscript, sumMealItems } from '@/lib/nutrition'
 import { mealItemsHaveUsdaBacking } from '@/lib/realtimeMealContext'
 import { MEAL_LABELS, MEAL_ORDER, type MealItem, type MealSlot, type VoiceLocationState } from '@/lib/types'
 
@@ -43,6 +43,12 @@ export function VoicePage() {
   const autoStartKeyRef = useRef<string | null>(null)
   const prevShowImmersiveRef = useRef(false)
   const beginImmersiveListeningRef = useRef<() => void>(() => {})
+  // Bug: handleAnalyze could be triggered twice in quick succession (e.g. tap Review,
+  // then the paused Submit button before the first call returns). Two concurrent
+  // parseMealWithApi requests would both write committedTranscript / previewItems and
+  // race to setStep('confirm'), so the slower response could clobber the faster one
+  // with stale data. Guard with a ref so only one analyze runs at a time.
+  const analyzeInFlightRef = useRef(false)
   const [params] = useSearchParams()
   const initialSlot = useMemo(() => parseSlot(params.get('slot')), [params])
   const [slot, setSlot] = useState<MealSlot>(initialSlot)
@@ -58,6 +64,8 @@ export function VoicePage() {
   /** `local` = offline keyword matcher (tiny food list), not USDA meal-parse. */
   const [previewSource, setPreviewSource] = useState<'api' | 'local' | null>(null)
   const [liveItems, setLiveItems] = useState<MealItem[]>([])
+  /** User tapped the orb to stop — keep bubbles and show a big Submit button. */
+  const [paused, setPaused] = useState(false)
 
   const wantsImmersive =
     params.get('capture') === '1' ||
@@ -78,7 +86,24 @@ export function VoicePage() {
   const realtimeAudioRef = useRef<HTMLAudioElement>(null)
 
   const speech = useSpeechRecognition({
-    onError: (msg) => setError(msg),
+    onError: (msg) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7630/ingest/869a58af-96c5-49f4-bbdd-a35babd1f94f', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'cb3770' },
+        body: JSON.stringify({
+          sessionId: 'cb3770',
+          runId: 'pre-fix',
+          hypothesisId: 'H3',
+          location: 'VoicePage.tsx:speech.onError',
+          message: 'Web Speech API error (unrelated to Realtime unless same banner text)',
+          data: { msgLen: msg.length, msgPreview: msg.slice(0, 120) },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {})
+      // #endregion
+      setError(msg)
+    },
   })
 
   const coachTranscriptFallback = speech.displayTranscript || speech.finalText
@@ -90,7 +115,22 @@ export function VoicePage() {
     goalsHeader: realtimeGoalsHeader,
     mealLiveItems: liveItems,
     coachTranscriptFallback,
-    onError: () => {
+    onError: (msg) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7630/ingest/869a58af-96c5-49f4-bbdd-a35babd1f94f', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'cb3770' },
+        body: JSON.stringify({
+          sessionId: 'cb3770',
+          runId: 'pre-fix',
+          hypothesisId: 'H1',
+          location: 'VoicePage.tsx:realtime.onError',
+          message: 'VoicePage maps all hook onError to generic banner',
+          data: { incomingMsgLen: msg?.length ?? 0, incomingPreview: String(msg ?? '').slice(0, 120) },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {})
+      // #endregion
       setError(VOICE_UNAVAILABLE_MSG)
     },
   })
@@ -110,6 +150,21 @@ export function VoicePage() {
 
   useEffect(() => {
     if (showImmersive && !realtimeConfigured) {
+      // #region agent log
+      fetch('http://127.0.0.1:7630/ingest/869a58af-96c5-49f4-bbdd-a35babd1f94f', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'cb3770' },
+        body: JSON.stringify({
+          sessionId: 'cb3770',
+          runId: 'pre-fix',
+          hypothesisId: 'H2',
+          location: 'VoicePage.tsx:useEffect:!realtimeConfigured',
+          message: 'Immersive shown but VITE_REALTIME_SESSION_URL empty — set generic error',
+          data: { showImmersive, realtimeConfigured },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {})
+      // #endregion
       setError(VOICE_UNAVAILABLE_MSG)
     }
   }, [showImmersive, realtimeConfigured])
@@ -146,7 +201,7 @@ export function VoicePage() {
 
   const transcriptForDisplay =
     showImmersive && realtimeConfigured
-      ? realtime.status === 'live'
+      ? realtime.status === 'live' || paused
         ? realtime.userTranscript
         : ''
       : speech.displayTranscript || speech.finalText
@@ -159,8 +214,9 @@ export function VoicePage() {
     if (realtime.status === 'live') {
       return realtime.assistantSpeaking ? 'Byte is speaking…' : 'Listening…'
     }
+    if (paused) return 'Paused · tap Submit or Resume'
     return 'Tap to connect'
-  }, [showImmersive, realtimeConfigured, realtime.assistantSpeaking, realtime.status])
+  }, [showImmersive, realtimeConfigured, realtime.assistantSpeaking, realtime.status, paused])
 
   /** Realtime-only immersive UI: orb enabled whenever a session URL exists (retry after errors). */
   const immersiveSpeechSupported = realtimeConfigured
@@ -184,34 +240,39 @@ export function VoicePage() {
       setError(VOICE_UNAVAILABLE_MSG)
       return
     }
-    if (realtime.status === 'connecting') {
-      const t = realtime.userTranscript
+    if (realtime.status === 'connecting' || realtime.status === 'live') {
       realtime.disconnect()
-      speech.setTranscriptManual(t)
+      setPaused(true)
       return
     }
-    if (realtime.status === 'live') {
-      const t = realtime.userTranscript
-      realtime.disconnect()
-      speech.setTranscriptManual(t)
-      return
-    }
+    if (paused) setPaused(false)
     beginImmersiveListening()
-  }, [beginImmersiveListening, realtime, realtimeConfigured, speech])
+  }, [beginImmersiveListening, paused, realtime, realtimeConfigured])
 
-  const exitImmersive = useCallback(() => {
-    releasePrimedMic()
-    if (immersiveRealtimeOn && (realtime.status === 'live' || realtime.status === 'connecting')) {
-      if (realtime.status === 'live') {
-        speech.setTranscriptManual(realtime.userTranscript)
-      }
-      realtime.disconnect()
-    }
+  useEffect(() => {
+    if (realtime.status === 'live' && paused) setPaused(false)
+  }, [realtime.status, paused])
+
+  /** Strip `capture` from the URL without leaving the page — used when entering the confirm step. */
+  const dropCaptureParam = useCallback(() => {
     const next = new URLSearchParams(params)
     next.delete('capture')
     const qs = next.toString()
-    navigate({ pathname: location.pathname, search: qs ? `?${qs}` : '' }, { replace: true, state: null })
-  }, [immersiveRealtimeOn, location.pathname, navigate, params, realtime, releasePrimedMic, speech])
+    navigate(
+      { pathname: location.pathname, search: qs ? `?${qs}` : '' },
+      { replace: true, state: null },
+    )
+  }, [location.pathname, navigate, params])
+
+  /** Cancel in the immersive view leaves the voice flow entirely. */
+  const exitImmersive = useCallback(() => {
+    releasePrimedMic()
+    if (immersiveRealtimeOn && (realtime.status === 'live' || realtime.status === 'connecting')) {
+      realtime.disconnect()
+    }
+    setPaused(false)
+    navigate('/home')
+  }, [immersiveRealtimeOn, navigate, realtime, releasePrimedMic])
 
   useLayoutEffect(() => {
     if (!showImmersive) return
@@ -247,7 +308,18 @@ export function VoicePage() {
     }
     const seq = ++liveParseSeq.current
     const timer = window.setTimeout(async () => {
-      const items = await parseMealTranscriptBestEffort(text)
+      // Bug: parseMealTranscriptBestEffort calls parseMealWithApi (which may throw on
+      // very edge cases) and parseMealFromTranscript (sync local code). Without a try
+      // block here, any throw became an unhandled promise rejection — and worse, a
+      // resolution that arrived after the user navigated away would still try to
+      // setLiveItems on an unmounted page. Catch everything and only commit when our
+      // sequence number is still current.
+      let items: MealItem[]
+      try {
+        items = await parseMealTranscriptBestEffort(text)
+      } catch {
+        return
+      }
       if (liveParseSeq.current !== seq) return
       setLiveItems(
         items.map((it, i) => ({
@@ -262,38 +334,63 @@ export function VoicePage() {
   }, [showImmersive, step, transcriptForDisplay])
 
   const handleAnalyze = useCallback(async () => {
+    // Bug: rapid double-tap (or Submit + Review fired together) could start two
+    // parseMealWithApi calls in parallel and the slower one would overwrite the
+    // faster one's preview state. Bail out if an analyze is already in flight,
+    // and clear the flag in finally so a later retry still works after errors.
+    if (analyzeInFlightRef.current) return
     const text = transcriptForDisplay.trim()
     if (!text) {
       setError('Add a description or use the microphone first.')
       return
     }
-    setError(null)
-    setCommittedTranscript(text)
-    speech.stop()
-    if (immersiveRealtimeOn && realtime.status !== 'idle' && realtime.status !== 'error') {
-      const t = realtime.userTranscript
-      realtime.disconnect()
-      speech.setTranscriptManual(t.trim() || text)
+    analyzeInFlightRef.current = true
+    try {
+      setError(null)
+      setCommittedTranscript(text)
+      speech.stop()
+      if (immersiveRealtimeOn && realtime.status !== 'idle' && realtime.status !== 'error') {
+        realtime.disconnect()
+      }
+      setPaused(false)
+      releasePrimedMic()
+      if (wantsImmersive) dropCaptureParam()
+      if (isMealParseStrict() && !getMealParseUrl()) {
+        setError('API-only mode: set VITE_MEAL_PARSE_URL in .env and restart the dev server.')
+        return
+      }
+      // Bug: parseMealWithApi internally swallows errors today, but if its contract ever
+      // changes (or the JSON parser inside it throws synchronously) an unhandled rejection
+      // would freeze the UI on the listen step with no banner. Belt-and-braces try/catch
+      // so we always surface a user-visible error and unstick the in-flight flag.
+      let apiItems: Awaited<ReturnType<typeof parseMealWithApi>>['items'] = null
+      let hint: string | undefined
+      try {
+        const result = await parseMealWithApi(text)
+        apiItems = result.items
+        hint = result.hint
+      } catch {
+        if (isMealParseStrict()) {
+          setError('Meal-parse request failed. Check the meal-parse service and try Review again.')
+          return
+        }
+      }
+      if (isMealParseStrict() && (!apiItems || apiItems.length === 0)) {
+        setError(
+          hint?.trim() ||
+            'Meal-parse returned nothing or failed (timeout, network, or HTTP error). Check the meal-parse service and try Review again.',
+        )
+        return
+      }
+      const usedApi = Boolean(apiItems?.length)
+      const items = usedApi ? apiItems : parseMealFromTranscript(text)
+      setPreviewSource(usedApi ? 'api' : 'local')
+      setPreviewItems(items)
+      setStep('confirm')
+    } finally {
+      analyzeInFlightRef.current = false
     }
-    if (wantsImmersive) exitImmersive()
-    if (isMealParseStrict() && !getMealParseUrl()) {
-      setError('API-only mode: set VITE_MEAL_PARSE_URL in .env and restart the dev server.')
-      return
-    }
-    const { items: apiItems, hint } = await parseMealWithApi(text)
-    if (isMealParseStrict() && (!apiItems || apiItems.length === 0)) {
-      setError(
-        hint?.trim() ||
-          'Meal-parse returned nothing or failed (timeout, network, or HTTP error). Check the meal-parse service and try Review again.',
-      )
-      return
-    }
-    const usedApi = Boolean(apiItems?.length)
-    const items = usedApi ? apiItems : parseMealFromTranscript(text)
-    setPreviewSource(usedApi ? 'api' : 'local')
-    setPreviewItems(items)
-    setStep('confirm')
-  }, [exitImmersive, immersiveRealtimeOn, realtime, speech, transcriptForDisplay, wantsImmersive])
+  }, [dropCaptureParam, immersiveRealtimeOn, realtime, releasePrimedMic, speech, transcriptForDisplay, wantsImmersive])
 
   const handleConfirmLog = useCallback(() => {
     if (!previewItems?.length) return
@@ -316,11 +413,6 @@ export function VoicePage() {
     analytics.track('meal_logged', { slot, item_count: previewItems.length, calories: t.calories })
     navigate('/home')
   }, [committedTranscript, logMeal, navigate, previewItems, slot])
-
-  const applySuggestion = (line: string) => {
-    speech.setTranscriptManual(line)
-    setError(null)
-  }
 
   const handleEditDescription = useCallback(() => {
     speech.stop()
@@ -348,6 +440,25 @@ export function VoicePage() {
       transcriptLooksMultiFood(committedTranscript),
   )
 
+  // Any visit to /voice while still in the listen step goes straight into immersive capture.
+  // This retires the old non-immersive screen and keeps any prior transcript so users can continue where they left off.
+  useEffect(() => {
+    if (step !== 'listen') return
+    if (wantsImmersive) return
+    const next = new URLSearchParams(params)
+    next.set('capture', '1')
+    navigate(
+      { pathname: '/voice', search: `?${next.toString()}` },
+      {
+        replace: true,
+        state: {
+          immersive: true,
+          prefillTranscript: committedTranscript || undefined,
+        } satisfies VoiceLocationState,
+      },
+    )
+  }, [committedTranscript, navigate, params, step, wantsImmersive])
+
   return (
     <div className="noir-page-enter noir-screen-root noir-surface relative min-h-full text-[var(--paper)]">
       <audio ref={realtimeAudioRef} className="hidden" playsInline autoPlay aria-hidden />
@@ -356,9 +467,7 @@ export function VoicePage() {
           slot={slot}
           onSlotChange={setSlot}
           transcript={transcriptForDisplay}
-          messages={
-            immersiveRealtimeOn && realtime.status === 'live' ? realtime.conversationMessages : []
-          }
+          messages={immersiveRealtimeOn ? realtime.conversationMessages : []}
           assistantSpeaking={immersiveRealtimeOn ? realtime.assistantSpeaking : false}
           listening={immersiveListening}
           speechSupported={immersiveSpeechSupported}
@@ -371,6 +480,8 @@ export function VoicePage() {
           onClose={exitImmersive}
           onReview={() => void handleAnalyze()}
           onUseKeyboard={exitImmersive}
+          paused={paused}
+          onSubmit={() => void handleAnalyze()}
           bottomError={error}
           hideBrowserSpeechHint
         />
@@ -397,74 +508,6 @@ export function VoicePage() {
             </option>
           ))}
         </select>
-
-        {step === 'listen' && (
-          <>
-            <div className="mb-12 flex flex-col items-center text-center">
-              <div className="relative mb-10 flex min-h-[11rem] w-full items-center justify-center">
-                {speech.listening && (
-                  <>
-                    <div className="absolute h-[15rem] w-[15rem] rounded-full bg-[var(--champagne)]/15" />
-                    <div className="absolute h-[12rem] w-[12rem] rounded-full bg-[var(--paper)]/10" />
-                  </>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError(null)
-                    speech.toggle()
-                  }}
-                  className="relative inline-flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--champagne)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ink)]"
-                >
-                  <div
-                    className={`relative flex h-36 w-36 items-center justify-center rounded-full bg-[var(--paper)] text-[var(--ink)] shadow-[0_20px_50px_-18px_rgba(0,0,0,0.45)] ${!speech.supported ? 'opacity-45' : ''}`}
-                  >
-                    <Mic className="h-16 w-16" strokeWidth={1.35} />
-                  </div>
-                </button>
-              </div>
-
-              <h2 className="mb-3 max-w-[20rem] text-[17px] font-medium leading-snug tracking-tight text-[var(--paper)]">
-                {speech.listening ? 'Listening…' : speech.supported ? 'Tap the mic to speak' : 'Dictation unavailable'}
-              </h2>
-              <p className="max-w-[19rem] text-sm leading-relaxed text-[var(--paper)]/55">
-                {speech.supported
-                  ? 'Describe ingredients and portions. Edit the text anytime.'
-                  : 'Use Chrome or Edge, or type below.'}
-              </p>
-            </div>
-
-            <div className="mb-6">
-              <label className="eyebrow mb-2 block text-[var(--paper)]/55">Description</label>
-              <textarea
-                value={transcriptForDisplay}
-                onChange={(e) => speech.setTranscriptManual(e.target.value)}
-                rows={5}
-                placeholder="Grilled salmon, rice, and greens…"
-                className="min-h-36 w-full rounded-2xl border border-[var(--line)] bg-[var(--ink-2)] p-5 text-[17px] leading-relaxed text-[var(--paper)] shadow-sm placeholder:text-[var(--paper)]/35 focus:border-[var(--champagne)]/40 focus:outline-none focus:ring-1 focus:ring-[var(--champagne)]/25"
-              />
-            </div>
-
-            {error && <p className="mb-6 text-sm leading-relaxed text-red-400">{error}</p>}
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="noir-magnet flex-1 rounded-full border border-[var(--line-strong)] py-4 font-mono text-xs uppercase tracking-[0.18em] text-[var(--paper)]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleAnalyze()}
-                className="noir-magnet flex-1 rounded-full bg-[var(--paper)] py-4 font-mono text-xs uppercase tracking-[0.18em] text-[var(--ink)]"
-              >
-                Review
-              </button>
-            </div>
-          </>
-        )}
 
         {step === 'confirm' && previewItems && (
           <div className="space-y-8">
@@ -574,36 +617,6 @@ export function VoicePage() {
         )}
       </div>
 
-      {step === 'listen' && (
-        <>
-          <div className="px-6 pb-8">
-            <p className="eyebrow mb-4 text-[var(--paper)]/55">Suggestions</p>
-            <ul className="divide-y divide-[var(--line-soft)] border-y border-[var(--line)]">
-              {QUICK_SUGGESTIONS.map((suggestion) => (
-                <li key={suggestion}>
-                  <button
-                    type="button"
-                    onClick={() => applySuggestion(suggestion)}
-                    className="flex w-full items-center justify-between gap-3 py-4 text-left text-[15px] text-[var(--paper)] transition-colors active:bg-[var(--paper)]/5"
-                  >
-                    <span className="min-w-0 flex-1 leading-snug">{suggestion}</span>
-                    <Plus className="h-4 w-4 shrink-0 text-[var(--paper)]/30" strokeWidth={1.75} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="px-6 pb-28">
-            <p className="eyebrow mb-4 text-[var(--paper)]/55">How it works</p>
-            <div className="space-y-4 text-sm leading-relaxed text-[var(--paper)]/55">
-              <p>Speak like you’re texting a friend who’s helping in the kitchen.</p>
-              <p>Byte turns that into ingredients and numbers—you stay in control.</p>
-              <p>Review once, then it’s on your log.</p>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   )
 }
