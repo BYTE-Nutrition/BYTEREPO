@@ -8,6 +8,8 @@ For **AI voice** in the app, run the small server in [`../realtime-proxy`](../re
 
 In **`app/.env`**, `VITE_REALTIME_SESSION_URL=/realtime/session` and `VITE_MEAL_PARSE_URL=/meal-parse` match the dev proxy to **`realtime-proxy`** on port 5050. For production, use your real HTTPS URLs (see [`docs/REALTIME_SESSION_API.md`](./docs/REALTIME_SESSION_API.md) and [`docs/MEAL_PARSE_API.md`](./docs/MEAL_PARSE_API.md)).
 
+**USDA meal-parse (Python) on macOS:** From this `app/` folder run `npm run meal-parse`. That creates `api-testing/USDA-API/.venv`, installs dependencies (including `eval_type_backport` for Apple’s Python 3.9), and starts `uvicorn` on **127.0.0.1:8787**. Point Vite at it with `VITE_MEAL_PARSE_USDA_TARGET=http://127.0.0.1:8787` and `VITE_MEAL_PARSE_URL=/meal-parse-usda` in `.env.local`, then restart `npm run dev`. Put a real `USDA_API_KEY` in `api-testing/USDA-API/.env` (override `DEMO_KEY` if you hit limits) and optionally `OPENAI_API_KEY` there or rely on `../../realtime-proxy/.env` when using the npm script.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)

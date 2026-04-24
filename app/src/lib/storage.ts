@@ -45,7 +45,6 @@ const DIETARY: DietaryRestriction[] = [
   'none',
   'vegetarian',
   'vegan',
-  'kosher',
   'pescatarian',
   'other',
 ]

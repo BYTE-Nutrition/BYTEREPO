@@ -65,7 +65,6 @@ export type DietaryRestriction =
   | 'none'
   | 'vegetarian'
   | 'vegan'
-  | 'kosher'
   | 'pescatarian'
   | 'other'
 

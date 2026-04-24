@@ -18,7 +18,6 @@ import {
 } from '@/lib/mealParseApi'
 import { QUICK_SUGGESTIONS, parseMealFromTranscript, sumMealItems } from '@/lib/nutrition'
 import { mealItemsHaveUsdaBacking } from '@/lib/realtimeMealContext'
-import type { VoiceTranscriptMessage } from '@/lib/voiceTranscript'
 import { MEAL_LABELS, MEAL_ORDER, type MealItem, type MealSlot, type VoiceLocationState } from '@/lib/types'
 
 function parseSlot(s: string | null): MealSlot {
@@ -34,12 +33,15 @@ function transcriptLooksMultiFood(s: string): boolean {
   return chunks.length >= 2
 }
 
+const VOICE_UNAVAILABLE_MSG = 'Voice unavailable, please check your connection and try again.'
+
 export function VoicePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const prefillApplied = useRef(false)
   const liveParseSeq = useRef(0)
-  const autoStartConsumedRef = useRef(false)
+  const autoStartKeyRef = useRef<string | null>(null)
+  const prevShowImmersiveRef = useRef(false)
   const beginImmersiveListeningRef = useRef<() => void>(() => {})
   const [params] = useSearchParams()
   const initialSlot = useMemo(() => parseSlot(params.get('slot')), [params])
@@ -74,7 +76,6 @@ export function VoicePage() {
   const realtimeSessionUrl = import.meta.env.VITE_REALTIME_SESSION_URL
   const realtimeConfigured = Boolean(realtimeSessionUrl?.trim())
   const realtimeAudioRef = useRef<HTMLAudioElement>(null)
-  const [fallbackSpeech, setFallbackSpeech] = useState(false)
 
   const speech = useSpeechRecognition({
     onError: (msg) => setError(msg),
@@ -89,20 +90,16 @@ export function VoicePage() {
     goalsHeader: realtimeGoalsHeader,
     mealLiveItems: liveItems,
     coachTranscriptFallback,
-    onError: (msg) => {
-      setError(msg)
-      setFallbackSpeech(true)
+    onError: () => {
+      setError(VOICE_UNAVAILABLE_MSG)
     },
   })
 
   useEffect(() => {
-    if (showImmersive && realtimeConfigured) {
-      setFallbackSpeech(false)
-    }
-  }, [showImmersive, realtimeConfigured])
-
-  useEffect(() => {
+    const wasImmersive = prevShowImmersiveRef.current
+    prevShowImmersiveRef.current = showImmersive
     if (showImmersive) return
+    if (!wasImmersive) return
     const st = realtime.status
     if (st !== 'live' && st !== 'connecting') return
     if (st === 'live') {
@@ -111,12 +108,17 @@ export function VoicePage() {
     realtime.disconnect()
   }, [showImmersive, realtime.disconnect, realtime.status, realtime.userTranscript, speech])
 
-  const immersiveRealtimeOn =
-    showImmersive && realtimeConfigured && !fallbackSpeech
+  useEffect(() => {
+    if (showImmersive && !realtimeConfigured) {
+      setError(VOICE_UNAVAILABLE_MSG)
+    }
+  }, [showImmersive, realtimeConfigured])
 
-  const immersiveListening = immersiveRealtimeOn
-    ? realtime.status === 'live' || realtime.status === 'connecting'
-    : speech.listening
+  /** Immersive capture always uses OpenAI Realtime when `VITE_REALTIME_SESSION_URL` is set (no Web Speech fallback). */
+  const immersiveRealtimeOn = showImmersive && realtimeConfigured
+
+  const immersiveListening =
+    immersiveRealtimeOn && (realtime.status === 'live' || realtime.status === 'connecting')
 
   const { level: micLevel, error: micVizError } = useMicLevel(
     immersiveListening,
@@ -143,57 +145,59 @@ export function VoicePage() {
   }, [location.hash, location.pathname, location.search, location.state, navigate, speech])
 
   const transcriptForDisplay =
-    immersiveRealtimeOn && realtime.status === 'live'
-      ? realtime.userTranscript
+    showImmersive && realtimeConfigured
+      ? realtime.status === 'live'
+        ? realtime.userTranscript
+        : ''
       : speech.displayTranscript || speech.finalText
 
   const immersiveStatusLine = useMemo(() => {
-    if (!immersiveRealtimeOn) return undefined
+    if (!showImmersive) return undefined
+    if (!realtimeConfigured) return VOICE_UNAVAILABLE_MSG
+    if (realtime.status === 'error') return VOICE_UNAVAILABLE_MSG
     if (realtime.status === 'connecting') return 'Connecting…'
-    if (realtime.status === 'error') return 'Live coach unavailable — tap to try again or use the keyboard'
     if (realtime.status === 'live') {
       return realtime.assistantSpeaking ? 'Byte is speaking…' : 'Listening…'
     }
-    return 'Tap for live coach'
-  }, [immersiveRealtimeOn, realtime.assistantSpeaking, realtime.status])
+    return 'Tap to connect'
+  }, [showImmersive, realtimeConfigured, realtime.assistantSpeaking, realtime.status])
 
-  const immersiveSpeechSupported = speech.supported || immersiveRealtimeOn
+  /** Realtime-only immersive UI: orb enabled whenever a session URL exists (retry after errors). */
+  const immersiveSpeechSupported = realtimeConfigured
 
   const beginImmersiveListening = useCallback(() => {
     setError(null)
-    analytics.track('voice_session_started', { mode: immersiveRealtimeOn ? 'realtime' : 'speech' })
-    if (immersiveRealtimeOn) {
-      speech.setTranscriptManual('')
-      void realtime.connect()
+    if (!realtimeConfigured) {
+      setError(VOICE_UNAVAILABLE_MSG)
       return
     }
-    const primed = takePrimedStream()
-    primed?.getTracks().forEach((t) => t.stop())
-    speech.start()
-  }, [immersiveRealtimeOn, realtime, speech, takePrimedStream])
+    analytics.track('voice_session_started', { mode: 'realtime' })
+    speech.setTranscriptManual('')
+    void realtime.connect()
+  }, [realtime, realtimeConfigured, speech])
 
   beginImmersiveListeningRef.current = beginImmersiveListening
 
   const toggleImmersiveMic = useCallback(() => {
     setError(null)
-    if (immersiveRealtimeOn) {
-      if (realtime.status === 'connecting') {
-        const t = realtime.userTranscript
-        realtime.disconnect()
-        speech.setTranscriptManual(t)
-        return
-      }
-      if (realtime.status === 'live') {
-        const t = realtime.userTranscript
-        realtime.disconnect()
-        speech.setTranscriptManual(t)
-        return
-      }
-      beginImmersiveListening()
+    if (!realtimeConfigured) {
+      setError(VOICE_UNAVAILABLE_MSG)
       return
     }
-    speech.toggle()
-  }, [beginImmersiveListening, immersiveRealtimeOn, realtime, speech])
+    if (realtime.status === 'connecting') {
+      const t = realtime.userTranscript
+      realtime.disconnect()
+      speech.setTranscriptManual(t)
+      return
+    }
+    if (realtime.status === 'live') {
+      const t = realtime.userTranscript
+      realtime.disconnect()
+      speech.setTranscriptManual(t)
+      return
+    }
+    beginImmersiveListening()
+  }, [beginImmersiveListening, realtime, realtimeConfigured, speech])
 
   const exitImmersive = useCallback(() => {
     releasePrimedMic()
@@ -210,25 +214,26 @@ export function VoicePage() {
   }, [immersiveRealtimeOn, location.pathname, navigate, params, realtime, releasePrimedMic, speech])
 
   useLayoutEffect(() => {
-    if (!showImmersive) {
-      autoStartConsumedRef.current = false
-      return
-    }
+    if (!showImmersive) return
+    if (!realtimeConfigured) return
+    if (realtime.status !== 'idle') return
     const st = location.state as VoiceLocationState | null
-    if (!st?.autoStartVoice || st.prefillTranscript?.trim()) return
-    if (autoStartConsumedRef.current) return
-    autoStartConsumedRef.current = true
-
-    navigate(
-      { pathname: location.pathname, search: location.search, hash: location.hash },
-      { replace: true, state: null },
-    )
+    if (st?.prefillTranscript?.trim()) return
+    const key = location.key || 'default'
+    if (autoStartKeyRef.current === key) return
+    autoStartKeyRef.current = key
 
     queueMicrotask(() => {
       beginImmersiveListeningRef.current()
+      if (location.state) {
+        navigate(
+          { pathname: location.pathname, search: location.search, hash: location.hash },
+          { replace: true, state: null },
+        )
+      }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid re-running after navigate clears state
-  }, [showImmersive, location.pathname, location.search, location.hash, navigate])
+  }, [showImmersive, realtimeConfigured, realtime.status, location.key, location.pathname, location.search, location.hash, navigate])
 
   useEffect(() => {
     if (!showImmersive || step !== 'listen') {
@@ -331,37 +336,6 @@ export function VoicePage() {
     [liveItems, transcriptForDisplay],
   )
 
-  /** Rows for the noir immersive transcript rail (Realtime uses hook transcript; Web Speech uses local dictation). */
-  const immersiveChatMessages = useMemo((): VoiceTranscriptMessage[] => {
-    if (immersiveRealtimeOn && realtime.status === 'live') {
-      const t = realtime.userTranscript.trim()
-      if (!t) return []
-      return [
-        {
-          id: 'immersive-rt-user',
-          role: 'user',
-          text: realtime.userTranscript,
-          status: 'streaming',
-          createdAt: Date.now(),
-        },
-      ]
-    }
-    if (!immersiveRealtimeOn) {
-      const t = transcriptForDisplay.trim()
-      if (!t) return []
-      return [
-        {
-          id: 'immersive-local-user',
-          role: 'user',
-          text: t,
-          status: 'streaming',
-          createdAt: Date.now(),
-        },
-      ]
-    }
-    return []
-  }, [immersiveRealtimeOn, realtime.status, realtime.userTranscript, transcriptForDisplay])
-
   const previewTotals = useMemo(
     () => (previewItems?.length ? sumMealItems(previewItems) : null),
     [previewItems],
@@ -382,7 +356,9 @@ export function VoicePage() {
           slot={slot}
           onSlotChange={setSlot}
           transcript={transcriptForDisplay}
-          messages={immersiveChatMessages}
+          messages={
+            immersiveRealtimeOn && realtime.status === 'live' ? realtime.conversationMessages : []
+          }
           assistantSpeaking={immersiveRealtimeOn ? realtime.assistantSpeaking : false}
           listening={immersiveListening}
           speechSupported={immersiveSpeechSupported}
@@ -396,6 +372,7 @@ export function VoicePage() {
           onReview={() => void handleAnalyze()}
           onUseKeyboard={exitImmersive}
           bottomError={error}
+          hideBrowserSpeechHint
         />
       )}
 

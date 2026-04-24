@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } fro
 import { BYTE_REALTIME_COACH_BASE } from '@/lib/realtimeCoachBase'
 import { buildAssistantMealContextFromLive, mealParsePipelineConfigured } from '@/lib/realtimeMealContext'
 import type { MealItem } from '@/lib/types'
+import type { VoiceTranscriptMessage } from '@/lib/voiceTranscript'
 
 export type RealtimeVoiceStatus = 'idle' | 'connecting' | 'live' | 'error'
 
@@ -18,9 +19,11 @@ export type UseOpenAiRealtimeVoiceOptions = {
   onError?: (message: string) => void
   /** Parsed meal lines (USDA-backed when meal-parse is configured) — pushed into Realtime instructions. */
   mealLiveItems?: MealItem[]
-  /** Web Speech / textarea transcript when Realtime user transcript is still empty. */
+  /** Optional hint for session instructions when Realtime user transcript is still empty (not used for the chat log). */
   coachTranscriptFallback?: string
 }
+
+const MAX_CONVERSATION_MESSAGES = 50
 
 function connectErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -63,6 +66,15 @@ function pushSessionInstructions(dc: RTCDataChannel, instructions: string) {
   )
 }
 
+function newMsgId(prefix: string): string {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`
+}
+
+function capMessages(prev: VoiceTranscriptMessage[]): VoiceTranscriptMessage[] {
+  if (prev.length <= MAX_CONVERSATION_MESSAGES) return prev
+  return prev.slice(-MAX_CONVERSATION_MESSAGES)
+}
+
 /**
  * OpenAI Realtime over WebRTC: mic + remote audio + `oai-events` data channel.
  * SDP is exchanged via your backend (see app/docs/REALTIME_SESSION_API.md).
@@ -82,6 +94,7 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
   const [userTranscript, setUserTranscript] = useState('')
   const [assistantSpeaking, setAssistantSpeaking] = useState(false)
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
+  const [conversationMessages, setConversationMessages] = useState<VoiceTranscriptMessage[]>([])
 
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const dcRef = useRef<RTCDataChannel | null>(null)
@@ -93,6 +106,7 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
     segmentUserRef.current = ''
     setUserTranscript('')
     setAssistantSpeaking(false)
+    setConversationMessages([])
     setStatus('idle')
 
     dcRef.current = null
@@ -125,29 +139,6 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
   const assistantInstructionsRef = useRef('')
   assistantInstructionsRef.current = assistantInstructions
 
-  const applyUserEvent = useCallback((event: Record<string, unknown>) => {
-    const type = String(event.type ?? '')
-    if (type === 'conversation.item.input_audio_transcription.delta') {
-      const delta = String(event.delta ?? '')
-      segmentUserRef.current += delta
-      const c = committedUserRef.current
-      const s = segmentUserRef.current
-      setUserTranscript(c ? `${c} ${s}`.trim() : s)
-      return
-    }
-    if (type === 'conversation.item.input_audio_transcription.completed') {
-      const tr = String(event.transcript ?? '').trim()
-      if (tr) {
-        committedUserRef.current = committedUserRef.current
-          ? `${committedUserRef.current} ${tr}`.trim()
-          : tr
-        segmentUserRef.current = ''
-        setUserTranscript(committedUserRef.current)
-      }
-      return
-    }
-  }, [])
-
   const handleDataMessage = useCallback(
     (raw: string) => {
       const event = parseEvent(raw)
@@ -167,14 +158,191 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
 
       if (type === 'response.created') {
         setAssistantSpeaking(true)
-      }
-      if (type === 'response.done' || type === 'response.completed') {
-        setAssistantSpeaking(false)
+        setConversationMessages((prev) => {
+          const last = prev[prev.length - 1]
+          if (last?.role === 'assistant' && last.status === 'streaming') return prev
+          return capMessages([
+            ...prev,
+            {
+              id: newMsgId('a'),
+              role: 'assistant',
+              text: '',
+              status: 'streaming',
+              createdAt: Date.now(),
+            },
+          ])
+        })
       }
 
-      applyUserEvent(event)
+      if (
+        type === 'response.output_audio_transcript.delta' ||
+        type === 'response.audio_transcript.delta'
+      ) {
+        const delta = String(event.delta ?? '')
+        if (!delta) return
+        setConversationMessages((prev) => {
+          const last = prev[prev.length - 1]
+          if (last?.role === 'assistant' && last.status === 'streaming') {
+            return capMessages([...prev.slice(0, -1), { ...last, text: last.text + delta }])
+          }
+          return capMessages([
+            ...prev,
+            {
+              id: newMsgId('a'),
+              role: 'assistant',
+              text: delta,
+              status: 'streaming',
+              createdAt: Date.now(),
+            },
+          ])
+        })
+      }
+
+      if (type === 'response.output_text.delta' || type === 'response.text.delta') {
+        const delta = String(event.delta ?? '')
+        if (!delta) return
+        setConversationMessages((prev) => {
+          const last = prev[prev.length - 1]
+          if (last?.role === 'assistant' && last.status === 'streaming') {
+            return capMessages([...prev.slice(0, -1), { ...last, text: last.text + delta }])
+          }
+          return capMessages([
+            ...prev,
+            {
+              id: newMsgId('a'),
+              role: 'assistant',
+              text: delta,
+              status: 'streaming',
+              createdAt: Date.now(),
+            },
+          ])
+        })
+      }
+
+      if (
+        type === 'response.output_audio_transcript.done' ||
+        type === 'response.audio_transcript.done'
+      ) {
+        const full = String(event.transcript ?? '').trim()
+        if (full) {
+          setConversationMessages((prev) => {
+            const last = prev[prev.length - 1]
+            if (last?.role === 'assistant' && last.status === 'streaming') {
+              return capMessages([...prev.slice(0, -1), { ...last, text: full, status: 'final' }])
+            }
+            return capMessages([
+              ...prev,
+              {
+                id: newMsgId('a'),
+                role: 'assistant',
+                text: full,
+                status: 'final',
+                createdAt: Date.now(),
+              },
+            ])
+          })
+        }
+      }
+
+      if (type === 'response.output_text.done' || type === 'response.text.done') {
+        const full = String(event.text ?? '').trim()
+        if (full) {
+          setConversationMessages((prev) => {
+            const last = prev[prev.length - 1]
+            if (last?.role === 'assistant' && last.status === 'streaming') {
+              return capMessages([...prev.slice(0, -1), { ...last, text: full, status: 'final' }])
+            }
+            return capMessages([
+              ...prev,
+              {
+                id: newMsgId('a'),
+                role: 'assistant',
+                text: full,
+                status: 'final',
+                createdAt: Date.now(),
+              },
+            ])
+          })
+        }
+      }
+
+      if (type === 'response.done' || type === 'response.completed') {
+        setAssistantSpeaking(false)
+        setConversationMessages((prev) => {
+          const last = prev[prev.length - 1]
+          if (last?.role === 'assistant' && last.status === 'streaming') {
+            return capMessages([...prev.slice(0, -1), { ...last, status: 'final' }])
+          }
+          return prev
+        })
+      }
+
+      if (type === 'conversation.item.input_audio_transcription.delta') {
+        const delta = String(event.delta ?? '')
+        segmentUserRef.current += delta
+        const c = committedUserRef.current
+        const s = segmentUserRef.current
+        const running = c ? `${c} ${s}`.trim() : s
+        setUserTranscript(running)
+        setConversationMessages((prev) => {
+          const last = prev[prev.length - 1]
+          if (last?.role === 'user' && last.status === 'streaming') {
+            return capMessages([...prev.slice(0, -1), { ...last, text: s }])
+          }
+          return capMessages([
+            ...prev,
+            {
+              id: newMsgId('u'),
+              role: 'user',
+              text: s,
+              status: 'streaming',
+              createdAt: Date.now(),
+            },
+          ])
+        })
+        return
+      }
+
+      if (type === 'conversation.item.input_audio_transcription.completed') {
+        const tr = String(event.transcript ?? '').trim()
+        if (tr) {
+          committedUserRef.current = committedUserRef.current
+            ? `${committedUserRef.current} ${tr}`.trim()
+            : tr
+        }
+        segmentUserRef.current = ''
+        const full = committedUserRef.current
+        setUserTranscript(full)
+        setConversationMessages((prev) => {
+          const last = prev[prev.length - 1]
+          if (last?.role === 'user' && last.status === 'streaming') {
+            return capMessages([
+              ...prev.slice(0, -1),
+              { ...last, text: tr || last.text, status: 'final' },
+            ])
+          }
+          if (tr) {
+            return capMessages([
+              ...prev,
+              {
+                id: newMsgId('u'),
+                role: 'user',
+                text: tr,
+                status: 'final',
+                createdAt: Date.now(),
+              },
+            ])
+          }
+          return prev
+        })
+        const dc = dcRef.current
+        if (dc && dc.readyState === 'open') {
+          pushSessionInstructions(dc, assistantInstructionsRef.current)
+        }
+        return
+      }
     },
-    [applyUserEvent, onError],
+    [onError],
   )
 
   const connect = useCallback(async () => {
@@ -192,6 +360,7 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
     committedUserRef.current = ''
     segmentUserRef.current = ''
     setUserTranscript('')
+    setConversationMessages([])
 
     let pc: RTCPeerConnection
     try {
@@ -310,6 +479,7 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
     userTranscript,
     assistantSpeaking,
     localStream,
+    conversationMessages,
     connect,
     disconnect,
   }

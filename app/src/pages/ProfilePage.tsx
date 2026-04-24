@@ -9,7 +9,6 @@ const DIETARY_CHOICES: { id: DietaryRestriction; label: string }[] = [
   { id: 'none', label: 'No restrictions' },
   { id: 'vegetarian', label: 'Vegetarian' },
   { id: 'vegan', label: 'Vegan' },
-  { id: 'kosher', label: 'Kosher' },
   { id: 'pescatarian', label: 'Pescatarian' },
   { id: 'other', label: 'Other (describe below)' },
 ]

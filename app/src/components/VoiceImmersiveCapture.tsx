@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Keyboard, X } from 'lucide-react'
 import { NoirMealSlotRail, NoirRollover, NoirStatusBar } from '@/components/noir/NoirPrimitives'
 import type { MealItem, MealSlot } from '@/lib/types'
@@ -28,6 +28,8 @@ type Props = {
   /** Shown when remote WebRTC audio could not autoplay (browser policy). */
   soundUnlockHint?: string | null
   onSoundUnlock?: () => void
+  /** Immersive flow uses OpenAI Realtime only — hide Web Speech “use Chrome” messaging. */
+  hideBrowserSpeechHint?: boolean
 }
 
 const VoiceChatRow = memo(function VoiceChatRow({
@@ -98,9 +100,11 @@ export const VoiceImmersiveCapture = memo(function VoiceImmersiveCapture({
   bottomError,
   soundUnlockHint,
   onSoundUnlock,
+  hideBrowserSpeechHint = false,
 }: Props) {
   const [sheetIn, setSheetIn] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {
@@ -109,14 +113,60 @@ export const VoiceImmersiveCapture = memo(function VoiceImmersiveCapture({
     return () => cancelAnimationFrame(id)
   }, [])
 
+  useEffect(() => {
+    if (!listening) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== ' ' && e.key !== 'Spacebar' && e.key !== 'Enter') return
+      const root = rootRef.current
+      const active = document.activeElement as HTMLElement | null
+      if (!root || !active) return
+      if (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable) return
+      if (active.tagName === 'BUTTON' && root.contains(active)) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [listening])
+
+  const [showAll, setShowAll] = useState(false)
+  const prevMessagesLenRef = useRef(messages.length)
+  useEffect(() => {
+    if (messages.length > prevMessagesLenRef.current) {
+      setShowAll(false)
+    }
+    prevMessagesLenRef.current = messages.length
+  }, [messages.length])
+
+  const { visibleMessages, hiddenCount, collapsibleCount } = useMemo(() => {
+    const lastUserIdx = (() => {
+      for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === 'user') return i
+      return -1
+    })()
+    const lastAssistantIdx = (() => {
+      for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === 'assistant') return i
+      return -1
+    })()
+    const keepIdx = new Set<number>()
+    if (lastUserIdx >= 0) keepIdx.add(lastUserIdx)
+    if (lastAssistantIdx >= 0) keepIdx.add(lastAssistantIdx)
+    const collapsible = messages.length - keepIdx.size
+    if (showAll || messages.length <= 1 || collapsible <= 0) {
+      return { visibleMessages: messages, hiddenCount: 0, collapsibleCount: collapsible }
+    }
+    const visible = messages.filter((_, i) => keepIdx.has(i))
+    const hidden = messages.length - visible.length
+    return { visibleMessages: visible, hiddenCount: hidden, collapsibleCount: collapsible }
+  }, [messages, showAll])
+
   const scrollTailKey =
-    messages.length === 0
+    visibleMessages.length === 0
       ? ''
-      : `${messages[messages.length - 1]?.id}:${messages[messages.length - 1]?.text.length}:${messages[messages.length - 1]?.status}`
+      : `${visibleMessages[visibleMessages.length - 1]?.id}:${visibleMessages[visibleMessages.length - 1]?.text.length}:${visibleMessages[visibleMessages.length - 1]?.status}`
 
   useLayoutEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' })
-  }, [scrollTailKey, messages.length])
+  }, [scrollTailKey, visibleMessages.length])
 
   const orbScale = 1 + audioLevel * 0.18
   const orbRingOpacity = 0.25 + audioLevel * 0.45
@@ -127,7 +177,10 @@ export const VoiceImmersiveCapture = memo(function VoiceImmersiveCapture({
     assistantSpeaking || (last?.role === 'assistant' && last.status === 'streaming')
 
   return (
-    <div className="byte-noir fixed inset-0 z-50 flex flex-col overflow-hidden bg-[var(--ink)] text-[var(--paper)]">
+    <div
+      ref={rootRef}
+      className="byte-noir fixed inset-0 z-50 flex flex-col overflow-hidden bg-[var(--ink)] text-[var(--paper)]"
+    >
       <NoirStatusBar dark />
 
       <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between px-6 pt-14">
@@ -179,7 +232,16 @@ export const VoiceImmersiveCapture = memo(function VoiceImmersiveCapture({
             <div className="noir-ring delay-2 rounded-full" style={{ opacity: orbRingOpacity * 0.6 }} />
             <button
               type="button"
-              onClick={onToggleMic}
+              onClick={(e) => {
+                e.currentTarget.blur()
+                onToggleMic()
+              }}
+              onKeyDown={(e) => {
+                if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') {
+                  e.preventDefault()
+                }
+              }}
+              tabIndex={-1}
               disabled={!speechSupported}
               className="absolute inset-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--champagne)]/40 disabled:opacity-40"
               aria-label={listening ? 'Stop listening' : 'Start listening'}
@@ -238,19 +300,49 @@ export const VoiceImmersiveCapture = memo(function VoiceImmersiveCapture({
                 </div>
               </div>
             ) : (
-              messages.map((m) => (
-                <VoiceChatRow
-                  key={m.id}
-                  message={m}
-                  showUserCursor={listening && m.role === 'user' && m.status === 'streaming'}
-                />
-              ))
+              <>
+                {hiddenCount > 0 && !showAll ? (
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.currentTarget.blur()
+                        setShowAll(true)
+                      }}
+                      className="rounded-full border border-[var(--paper)]/20 bg-[var(--ink-2)]/80 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--paper)]/70 backdrop-blur hover:text-[var(--paper)]"
+                    >
+                      Show earlier ({hiddenCount})
+                    </button>
+                  </div>
+                ) : null}
+                {showAll && collapsibleCount > 0 ? (
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.currentTarget.blur()
+                        setShowAll(false)
+                      }}
+                      className="rounded-full border border-[var(--paper)]/20 bg-[var(--ink-2)]/80 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--paper)]/70 backdrop-blur hover:text-[var(--paper)]"
+                    >
+                      Hide earlier
+                    </button>
+                  </div>
+                ) : null}
+                {visibleMessages.map((m) => (
+                  <VoiceChatRow
+                    key={m.id}
+                    message={m}
+                    showUserCursor={listening && m.role === 'user' && m.status === 'streaming'}
+                  />
+                ))}
+              </>
             )}
 
             {micVizError ? (
               <p className="text-center text-xs text-amber-300/90">{micVizError}</p>
             ) : null}
-            {!speechSupported ? (
+            {!speechSupported && !hideBrowserSpeechHint ? (
               <p className="mx-auto max-w-[20rem] text-center text-sm text-[var(--paper)]/50">
                 Use Chrome or Edge, or open the keyboard to type.
               </p>

@@ -18,7 +18,6 @@ const DIETARY_OPTIONS: { id: DietaryRestriction; label: string; hint: string }[]
   { id: 'none', label: 'No restrictions', hint: 'I eat everything' },
   { id: 'vegetarian', label: 'Vegetarian', hint: 'No meat or fish' },
   { id: 'vegan', label: 'Vegan', hint: 'No animal products' },
-  { id: 'kosher', label: 'Kosher', hint: 'Kosher dietary laws' },
   { id: 'pescatarian', label: 'Pescatarian', hint: 'Fish yes; other meat no' },
   { id: 'other', label: 'Other', hint: 'Tell us what you avoid below' },
 ]
