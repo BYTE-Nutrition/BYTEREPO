@@ -1,19 +1,1037 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Byte</title>
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>BYTE — Your Sous Chef. Always On.</title>
+  <meta name="description" content="BYTE listens as you cook and answers your questions in real time — wrong temps, timing, portions, technique. Hands-free." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+    :root{
+      --ink:#040404;
+      --ink-2:#0d0d0d;
+      --ink-3:#161616;
+      --ink-4:#222;
+      --white:#ffffff;
+      --paper:#f4f2ee;
+      --paper-hi:rgba(244,242,238,0.92);
+      --paper-mid:rgba(244,242,238,0.72);
+      --paper-lo:rgba(244,242,238,0.50);
+      --champagne:#d8c89c;
+      --champ-dim:rgba(216,200,156,0.45);
+      --champ-glow:rgba(216,200,156,0.12);
+      --amber:#e8a44a;
+      --line:rgba(255,255,255,0.08);
+      --line-hi:rgba(255,255,255,0.15);
+      --serif:'Instrument Serif',Georgia,serif;
+      --sans:'Archivo',system-ui,sans-serif;
+      --mono:'JetBrains Mono',monospace;
+      --spring:cubic-bezier(0.16,1,0.3,1);
+      --safe-top:env(safe-area-inset-top,0px);
+      --safe-right:env(safe-area-inset-right,0px);
+      --safe-bottom:env(safe-area-inset-bottom,0px);
+      --safe-left:env(safe-area-inset-left,0px);
+    }
+
+    html{scroll-behavior:smooth;}
+    body{background:var(--ink);color:var(--paper);font-family:var(--sans);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+
+    /* ─── SCROLL PROGRESS BAR ─── */
+    #progress{position:fixed;top:0;left:0;height:2px;background:var(--champagne);z-index:500;width:0%;transition:width .1s;}
+
+    /* ─── NAV ─── */
+    nav{
+      position:fixed;top:0;left:0;right:0;width:100%;z-index:300;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:20px 48px;
+      background:rgba(4,4,4,0.78);
+      backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+      border-bottom:1px solid var(--line);
+      transition:padding .4s var(--spring),background .3s;
+    }
+    .nav-logo{display:flex;align-items:center;text-decoration:none;flex-shrink:0;}
+    .nav-wordmark{font-family:var(--sans);font-size:clamp(20px,2.4vw,28px);font-weight:800;letter-spacing:0.14em;color:#fff;text-transform:uppercase;}
+    .nav-links{display:flex;align-items:center;gap:36px;list-style:none;}
+    .nav-links a{font-size:13px;font-weight:500;color:var(--paper-mid);text-decoration:none;letter-spacing:.03em;transition:color .2s;}
+    .btn-nav{font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);background:var(--champagne);border:none;padding:10px 22px;border-radius:100px;cursor:pointer;text-decoration:none;white-space:nowrap;transition:opacity .2s,transform .2s;}
+
+    /* ─── REVEAL SYSTEM ─── */
+    .reveal{opacity:0;transition:opacity .95s var(--spring),transform .95s var(--spring),filter .7s var(--spring);}
+    .reveal.from-up   {transform:translateY(55px);filter:blur(8px);}
+    .reveal.from-left {transform:translateX(-60px);filter:blur(6px);}
+    .reveal.from-right{transform:translateX(60px);filter:blur(6px);}
+    .reveal.from-scale{transform:scale(0.88) translateY(30px);filter:blur(10px);}
+    .reveal.visible   {opacity:1;transform:none;filter:blur(0);}
+    .d1{transition-delay:.08s;}.d2{transition-delay:.16s;}.d3{transition-delay:.24s;}
+    .d4{transition-delay:.32s;}.d5{transition-delay:.42s;}.d6{transition-delay:.52s;}
+
+    /* ─── SHARED ─── */
+    .eyebrow{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--champagne);opacity:.85;}
+    h2{font-family:var(--serif);font-size:clamp(38px,5vw,60px);font-weight:400;line-height:1.08;letter-spacing:-.025em;color:#fff;margin-top:14px;}
+    h2 em{font-style:italic;color:var(--champagne);}
+    section{padding:120px 48px;}
+    .section-inner{max-width:1100px;margin:0 auto;}
+    .section-header{text-align:center;margin-bottom:80px;}
+
+    /* ─── HERO ─── */
+    #hero{
+      min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;padding:160px 48px 100px;position:relative;overflow:hidden;
+    }
+    /* Layered background — warm amber + champagne, no blur filter */
+    .hero-bg{
+      position:absolute;inset:0;pointer-events:none;
+      background:
+        radial-gradient(ellipse 900px 700px at 50% 30%, rgba(216,200,156,0.13) 0%, transparent 65%),
+        radial-gradient(ellipse 600px 400px at 70% 80%, rgba(232,164,74,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 500px 500px at 20% 70%, rgba(216,200,156,0.05) 0%, transparent 60%);
+      animation:heroBgPulse 10s ease-in-out infinite;
+    }
+    @keyframes heroBgPulse{0%,100%{opacity:1;}50%{opacity:.75;}}
+
+    .hero-content{position:relative;z-index:2;max-width:840px;}
+
+    .hero-badge{display:inline-flex;align-items:center;gap:8px;margin-bottom:32px;padding:8px 18px;border:1px solid var(--line-hi);border-radius:100px;background:rgba(216,200,156,0.07);}
+    .hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--champagne);animation:dotPulse 2.2s ease-in-out infinite;}
+    @keyframes dotPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
+
+    h1{font-family:var(--serif);font-size:clamp(54px,9.5vw,100px);font-weight:400;line-height:.98;letter-spacing:-.028em;color:#fff;margin-bottom:10px;}
+    h1 em{font-style:italic;color:var(--champagne);}
+
+    .hero-sub{font-size:clamp(17px,2.2vw,20px);color:var(--paper-mid);max-width:560px;margin:0 auto 52px;line-height:1.6;}
+    .hero-sub strong{color:var(--paper-hi);font-weight:600;}
+
+    /* Waveform */
+    .wave-wrap{position:relative;display:flex;align-items:center;justify-content:center;height:110px;margin:0 0 52px;}
+    .wave-glow{position:absolute;inset:-30px -90px;background:radial-gradient(ellipse at center,rgba(216,200,156,0.16) 0%,transparent 65%);pointer-events:none;}
+    .pulse-ring{position:absolute;width:80px;height:80px;border-radius:50%;border:1px solid rgba(216,200,156,0.45);animation:ringOut 2.6s ease-out infinite;pointer-events:none;}
+    .pulse-ring:nth-child(2){animation-delay:.88s;}
+    .pulse-ring:nth-child(3){animation-delay:1.76s;}
+    @keyframes ringOut{0%{transform:scale(1);opacity:.6;}100%{transform:scale(4.5);opacity:0;}}
+    .wave-bars{display:flex;align-items:center;gap:3px;height:100%;position:relative;z-index:2;}
+    .wave-bar{width:3px;border-radius:2px;background:var(--champagne);min-height:4px;animation:waveA var(--dur,1.1s) ease-in-out infinite;animation-delay:var(--dl,0s);}
+    @keyframes waveA{0%,100%{height:var(--mn,6px);opacity:.3;}50%{height:var(--pk,40px);opacity:1;}}
+    .wave-label{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--champagne);opacity:.6;white-space:nowrap;}
+
+    /* CTAs */
+    .hero-cta{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:30px;}
+    .btn-primary{display:inline-flex;align-items:center;gap:8px;font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink);background:var(--champagne);border:none;padding:15px 32px;border-radius:100px;cursor:pointer;text-decoration:none;transition:all .28s var(--spring);position:relative;overflow:hidden;}
+    .btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);transform:translateX(-100%);animation:shimmer 4s ease-in-out 3s infinite;}
+    @keyframes shimmer{0%{transform:translateX(-100%);}35%,100%{transform:translateX(220%);}}
+    .btn-ghost{font-family:var(--sans);font-size:13px;font-weight:500;color:var(--paper-mid);background:transparent;border:1px solid var(--line-hi);padding:14px 28px;border-radius:100px;cursor:pointer;text-decoration:none;transition:all .2s;}
+
+    /* ─── APP STORE BADGES (matching official style) ─── */
+    .store-btns{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
+    .app-badge{
+      display:inline-flex;align-items:center;gap:11px;
+      background:#000;border:1.5px solid rgba(255,255,255,0.22);
+      border-radius:12px;padding:10px 18px;text-decoration:none;
+      color:#fff;transition:all .28s var(--spring);
+    }
+    .app-badge-icon{flex-shrink:0;display:flex;align-items:center;}
+    .app-badge-icon svg{width:22px;height:22px;fill:#fff;}
+    .app-badge-text{display:flex;flex-direction:column;line-height:1.15;}
+    .app-badge-sub{font-family:var(--sans);font-size:10px;font-weight:400;color:rgba(255,255,255,.7);letter-spacing:.01em;}
+    .app-badge-name{font-family:var(--sans);font-size:17px;font-weight:700;color:#fff;letter-spacing:-.01em;}
+
+    .scroll-hint{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;opacity:.3;animation:bob 2.2s ease-in-out infinite;}
+    .scroll-hint span{font-family:var(--mono);font-size:9px;letter-spacing:.2em;text-transform:uppercase;}
+    .scroll-line{width:1px;height:30px;background:linear-gradient(to bottom,#fff,transparent);}
+    @keyframes bob{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(7px);}}
+
+    /* ─── TICKER ─── */
+    .ticker-wrap{overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--ink-2);padding:14px 0;}
+    .ticker-track{display:flex;gap:80px;animation:marquee 28s linear infinite;white-space:nowrap;}
+    .ticker-item{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;color:var(--paper-lo);letter-spacing:.12em;text-transform:uppercase;flex-shrink:0;}
+    .ticker-dot{width:4px;height:4px;border-radius:50%;background:var(--champagne);opacity:.7;}
+    @keyframes marquee{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+
+    /* ─── STATS ─── */
+    .stat-strip{display:flex;justify-content:center;background:var(--ink-3);border-top:1px solid var(--line);border-bottom:1px solid var(--line);flex-wrap:wrap;}
+    .stat{flex:1;min-width:140px;text-align:center;padding:60px 40px;border-right:1px solid var(--line);transition:background .3s;}
+    .stat:last-child{border-right:none;}
+    .stat-num{font-family:var(--serif);font-size:54px;color:#fff;line-height:1;margin-bottom:10px;display:block;}
+    .stat-label{font-family:var(--mono);font-size:11px;color:var(--paper-mid);letter-spacing:.16em;text-transform:uppercase;}
+
+    /* ─── CONVERSATION SECTION ─── */
+    #convo{background:var(--ink-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+    .convo-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;max-width:1100px;margin:0 auto;}
+    .convo-text h2{text-align:left;}
+    .convo-text .eyebrow{display:block;margin-bottom:14px;}
+    .convo-text p{font-size:16px;color:var(--paper-mid);line-height:1.72;margin-top:18px;}
+
+    /* Chat bubbles */
+    .convo-chat{display:flex;flex-direction:column;gap:14px;}
+    .bubble{border-radius:18px;padding:13px 17px;font-size:14px;line-height:1.55;max-width:88%;}
+    .bubble-user{
+      align-self:flex-end;
+      background:var(--ink-4);
+      border:1px solid var(--line-hi);
+      color:var(--paper-hi);
+      border-bottom-right-radius:5px;
+    }
+    .bubble-byte{
+      align-self:flex-start;
+      background:rgba(216,200,156,0.1);
+      border:1px solid rgba(216,200,156,0.22);
+      color:#fff;
+      border-bottom-left-radius:5px;
+    }
+    .bubble-byte .byte-label{
+      font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;
+      text-transform:uppercase;color:var(--champagne);opacity:.8;
+      display:block;margin-bottom:5px;
+    }
+    .bubble-byte.warn{
+      background:rgba(232,164,74,0.09);
+      border-color:rgba(232,164,74,0.28);
+    }
+    .bubble-byte.warn .byte-label{color:var(--amber);}
+    .bubble-user .user-label{
+      font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;
+      text-transform:uppercase;color:var(--paper-lo);
+      display:block;margin-bottom:5px;
+    }
+
+    /* ─── HOW IT WORKS ─── */
+    #how{background:var(--ink);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+    .steps-grid{display:grid;grid-template-columns:1fr 48px 1fr 48px 1fr;align-items:stretch;}
+    .step{background:var(--ink-3);padding:48px 36px;transition:background .35s,transform .4s var(--spring);}
+    .step:first-child{border-radius:20px 0 0 20px;}
+    .step:last-child{border-radius:0 20px 20px 0;}
+    .step-arrow{display:flex;align-items:center;justify-content:center;background:var(--ink-3);}
+    .step-arrow svg{width:18px;height:18px;color:var(--champagne);opacity:.45;}
+    .step-num{font-family:var(--serif);font-size:62px;font-weight:400;line-height:1;color:var(--champagne);opacity:.18;margin-bottom:18px;display:block;}
+    .step-icon{width:44px;height:44px;border-radius:12px;background:var(--champ-glow);border:1px solid var(--champ-dim);display:flex;align-items:center;justify-content:center;margin-bottom:20px;}
+    .step-icon svg{width:20px;height:20px;color:var(--champagne);}
+    .step h3{font-family:var(--sans);font-size:17px;font-weight:700;color:#fff;margin-bottom:10px;letter-spacing:-.01em;}
+    .step p{font-size:14px;color:var(--paper-mid);line-height:1.65;}
+    .step-example{margin-top:14px;padding:10px 13px;background:rgba(216,200,156,0.07);border:1px solid rgba(216,200,156,0.18);border-radius:10px;font-family:var(--mono);font-size:10px;color:var(--champagne);line-height:1.5;letter-spacing:.02em;}
+
+    /* ─── USE CASES ─── */
+    #use-cases{background:var(--ink-2);}
+    .cards-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+    .card{background:var(--ink-3);border:1px solid var(--line);border-radius:20px;padding:40px;transition:border-color .3s,transform .4s var(--spring),background .3s;position:relative;overflow:hidden;cursor:default;transform-style:preserve-3d;}
+    .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--champ-dim),transparent);opacity:0;transition:opacity .3s;}
+    .card-icon{width:52px;height:52px;border-radius:14px;background:var(--champ-glow);border:1px solid var(--champ-dim);display:flex;align-items:center;justify-content:center;margin-bottom:24px;}
+    .card-icon svg{width:24px;height:24px;color:var(--champagne);stroke-width:1.5;}
+    .card h3{font-family:var(--sans);font-size:20px;font-weight:700;color:#fff;margin-bottom:10px;letter-spacing:-.01em;}
+    .card p{font-size:14px;color:var(--paper-mid);line-height:1.7;}
+    .card-tag{display:inline-block;margin-top:20px;font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--champagne);opacity:.65;}
+
+    /* ─── DEMO ─── */
+    #demo{background:var(--ink);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+    .demo-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;}
+    .demo-text h2{text-align:left;}
+    .demo-text .eyebrow{margin-bottom:16px;display:block;}
+    .demo-text p{font-size:15px;color:var(--paper-mid);line-height:1.72;margin-top:18px;max-width:430px;}
+    .demo-features{list-style:none;margin-top:28px;display:flex;flex-direction:column;gap:13px;}
+    .demo-features li{display:flex;align-items:flex-start;gap:12px;font-size:14px;color:var(--paper-mid);}
+    .demo-features li::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--champagne);margin-top:6px;flex-shrink:0;}
+
+    /* ─── IPHONE — STATIC (no floating) ─── */
+    .demo-phone{display:flex;justify-content:center;align-items:center;position:relative;}
+    .phone-glow{position:absolute;width:460px;height:460px;border-radius:50%;background:radial-gradient(circle,rgba(216,200,156,0.14) 0%,rgba(216,200,156,0.04) 45%,transparent 68%);animation:glowPulse 6s ease-in-out infinite;pointer-events:none;}
+    @keyframes glowPulse{0%,100%{opacity:.9;transform:scale(1);}50%{opacity:1;transform:scale(1.07);}}
+
+    .iphone{
+      width:288px;height:626px;background:#000;
+      border-radius:52px;
+      border:1.5px solid rgba(255,255,255,0.11);
+      position:relative;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.95),
+        0 40px 90px rgba(0,0,0,0.8),
+        0 0 60px rgba(216,200,156,0.08),
+        inset 0 0 0 1px rgba(255,255,255,0.03);
+      overflow:hidden;
+      /* NO phoneFloat — static */
+    }
+    .iphone-island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:112px;height:34px;background:#000;border-radius:22px;z-index:10;border:1px solid rgba(255,255,255,0.04);}
+    .iphone::before{content:'';position:absolute;left:-3px;top:108px;width:3px;height:34px;background:rgba(255,255,255,0.09);border-radius:2px 0 0 2px;box-shadow:0 50px 0 rgba(255,255,255,0.09),0 90px 0 rgba(255,255,255,0.09);}
+    .iphone::after{content:'';position:absolute;right:-3px;top:138px;width:3px;height:62px;background:rgba(255,255,255,0.09);border-radius:0 2px 2px 0;}
+
+    /* ─── APP SCREEN ─── */
+    .app{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;font-family:var(--sans);overflow:hidden;}
+    .app-sb{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 2px;flex-shrink:0;}
+    .app-sb-time{font-size:12px;font-weight:700;color:#fff;letter-spacing:-.01em;}
+    .app-sb-icons{display:flex;align-items:center;gap:5px;}
+    .app-topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 20px 0;flex-shrink:0;}
+    .app-logo{font-family:var(--sans);font-size:16px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;}
+    .app-burger{display:flex;flex-direction:column;gap:4px;}
+    .app-burger span{display:block;width:20px;height:1.5px;background:rgba(255,255,255,.8);border-radius:2px;}
+    .app-ctx{padding:12px 20px 0;font-family:var(--mono);font-size:7.5px;letter-spacing:.17em;text-transform:uppercase;color:rgba(255,255,255,.32);flex-shrink:0;}
+    .app-heading{padding:5px 20px 0;font-family:var(--serif);font-size:21px;font-weight:400;line-height:1.2;color:#fff;letter-spacing:-.01em;flex-shrink:0;}
+
+    /* Mic area */
+    .app-mic-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 0 4px;}
+
+    /* ─── MIC BUTTON PULSES (interactive feel) ─── */
+    .app-mic-outer{position:relative;display:flex;align-items:center;justify-content:center;width:136px;height:136px;flex-shrink:0;}
+    .mic-ring{position:absolute;width:136px;height:136px;border-radius:50%;border:1px solid rgba(216,200,156,0.3);animation:micRing 2.5s ease-out infinite;pointer-events:none;}
+    .mic-ring:nth-child(2){animation-delay:.85s;}
+    @keyframes micRing{0%{transform:scale(1);opacity:.7;}100%{transform:scale(1.65);opacity:0;}}
+    .app-mic-btn{
+      width:136px;height:136px;border-radius:50%;
+      background:radial-gradient(circle at 38% 32%,#2c2c2c 0%,#1a1a1a 45%,#0e0e0e 100%);
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 0 0 1px rgba(255,255,255,0.05),0 24px 60px rgba(0,0,0,0.85),inset 0 1px 0 rgba(255,255,255,0.06);
+      position:relative;z-index:2;cursor:pointer;flex-shrink:0;
+      transition:transform .2s var(--spring),box-shadow .2s;
+    }
+    .app-mic-btn:active{transform:scale(.94);}
+    .app-mic-btn svg{width:38px;height:38px;color:rgba(255,255,255,.85);}
+    .app-tap{margin-top:14px;font-size:12px;color:rgba(255,255,255,.65);font-family:var(--sans);}
+    .app-listening{margin-top:3px;font-family:var(--mono);font-size:7.5px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.32);}
+
+    .app-hr{height:1px;background:rgba(255,255,255,.06);margin:0 20px;flex-shrink:0;}
+    .app-stats{display:flex;align-items:flex-start;justify-content:space-between;padding:10px 20px;flex-shrink:0;}
+    .app-stat-lbl{font-family:var(--mono);font-size:7px;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.38);margin-bottom:2px;}
+    .app-stat-val{font-family:var(--serif);font-size:26px;color:#fff;line-height:1;display:flex;align-items:baseline;gap:3px;}
+    .app-stat-unit{font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;color:rgba(255,255,255,.4);}
+    .app-stat-r{text-align:right;}
+    .app-macros{display:flex;align-items:center;justify-content:center;gap:18px;padding:10px 20px 12px;flex-shrink:0;}
+    .app-macro{display:flex;flex-direction:column;align-items:center;gap:5px;}
+    .macro-ring{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .macro-v{font-size:11px;font-weight:600;color:#fff;line-height:1;}
+    .macro-u{font-family:var(--mono);font-size:6.5px;color:rgba(255,255,255,.32);}
+    .macro-n{font-family:var(--mono);font-size:7px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.35);}
+    .app-nav{display:flex;align-items:center;justify-content:space-around;padding:8px 12px 14px;border-top:1px solid rgba(255,255,255,.055);background:rgba(0,0,0,.95);flex-shrink:0;}
+    .app-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;}
+    .app-nav-item svg{width:18px;height:18px;color:rgba(255,255,255,.3);}
+    .app-nav-item span{font-family:var(--mono);font-size:6px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.28);}
+    .app-nav-item.on svg{color:rgba(255,255,255,.88);}
+    .app-nav-item.on span{color:rgba(255,255,255,.65);}
+    .app-nav-mic{width:44px;height:44px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(255,255,255,.15);margin-top:-16px;flex-shrink:0;cursor:pointer;transition:transform .2s var(--spring),box-shadow .2s;}
+    .app-nav-mic svg{width:18px;height:18px;color:#000;}
+
+    /* ─── WAITLIST ─── */
+    #waitlist{background:var(--ink-2);text-align:center;}
+    .waitlist-inner{max-width:640px;margin:0 auto;}
+    .waitlist-inner h2{margin-bottom:16px;}
+    .waitlist-sub{font-size:17px;color:var(--paper-mid);margin-bottom:48px;line-height:1.65;}
+    .waitlist-form{display:flex;gap:12px;max-width:460px;margin:0 auto 18px;}
+    .waitlist-input{flex:1;font-family:var(--sans);font-size:14px;color:#fff;background:var(--ink-3);border:1px solid var(--line-hi);border-radius:100px;padding:14px 22px;outline:none;transition:border-color .2s;}
+    .waitlist-input::placeholder{color:var(--paper-lo);}
+    .waitlist-input:focus{border-color:rgba(216,200,156,.45);}
+    .waitlist-btn{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);background:var(--champagne);border:none;padding:14px 26px;border-radius:100px;cursor:pointer;transition:all .25s var(--spring);white-space:nowrap;}
+    .waitlist-note{font-family:var(--mono);font-size:10px;color:var(--paper-lo);letter-spacing:.08em;}
+    .waitlist-success{display:none;flex-direction:column;align-items:center;gap:12px;padding:32px;background:rgba(216,200,156,.07);border:1px solid rgba(216,200,156,.22);border-radius:20px;}
+    .waitlist-success.show{display:flex;}
+    .success-icon{width:52px;height:52px;border-radius:50%;background:var(--champagne);display:flex;align-items:center;justify-content:center;}
+    .success-icon svg{width:22px;height:22px;color:#000;}
+    .waitlist-success h3{font-family:var(--serif);font-size:26px;color:#fff;}
+    .waitlist-success p{font-size:14px;color:var(--paper-mid);}
+    .waitlist-stores{margin-top:40px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+    .waitlist-stores-label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-lo);}
+
+    /* ─── FOOTER ─── */
+    footer{background:var(--ink-3);border-top:1px solid var(--line);padding:48px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:24px;}
+    .footer-brand{display:flex;flex-direction:column;gap:6px;}
+    .footer-wm{font-family:var(--sans);font-size:16px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#fff;opacity:.85;}
+    .footer-tag{font-family:var(--mono);font-size:10px;color:var(--paper-lo);letter-spacing:.1em;}
+    .footer-links{display:flex;gap:28px;list-style:none;}
+    .footer-links a{font-size:12px;color:var(--paper-lo);text-decoration:none;transition:color .2s;}
+    .footer-copy{font-family:var(--mono);font-size:10px;color:var(--paper-lo);letter-spacing:.06em;}
+
+    /* ─── RESPONSIVE ─── */
+    @media(max-width:900px){
+      nav{padding:16px 24px;} .nav-links{display:none;}
+      #hero{padding:130px 24px 90px;} section{padding:90px 24px;}
+      .steps-grid{grid-template-columns:1fr;} .step-arrow{display:none;}
+      .step:first-child{border-radius:20px 20px 0 0;} .step:last-child{border-radius:0 0 20px 20px;}
+      .cards-grid{grid-template-columns:1fr;}
+      .demo-inner{grid-template-columns:1fr;gap:48px;} .demo-text h2{text-align:center;}
+      .demo-phone{order:-1;}
+      .convo-grid{grid-template-columns:1fr;gap:48px;} .convo-text h2{text-align:center;}
+      .waitlist-form{flex-direction:column;}
+      footer{flex-direction:column;align-items:flex-start;padding:40px 24px;}
+      .stat{padding:40px 24px;}
+    }
+    @media(max-width:480px){
+      .iphone{width:252px;height:546px;}
+      .app-mic-btn,.app-mic-outer{width:110px;height:110px;}
+      .app-heading{font-size:18px;}
+    }
+
+    /* ─── iOS / TOUCH ENHANCEMENTS ─── */
+
+    /* Remove the blue flash on tap */
+    *{-webkit-tap-highlight-color:transparent;}
+
+    /* Prevent long-press callout on links/images */
+    a,img{-webkit-touch-callout:none;}
+
+    /* Remove 300ms tap delay on all interactive elements */
+    button,a,.btn-primary,.btn-ghost,.btn-nav,.app-badge,
+    .waitlist-btn,.app-mic-btn,.app-nav-mic{touch-action:manipulation;}
+
+    /* Disable text selection on UI chrome — keep inputs selectable */
+    nav,button,.btn-primary,.btn-ghost,.btn-nav,.app-badge,
+    .card,.step,.stat,.waitlist-btn,.app-mic-btn,.app-nav-mic,
+    .app-nav-item,.footer-links,.hero-badge,h1,h2,h3,
+    .eyebrow,.ticker-item,.step-num{
+      -webkit-user-select:none;user-select:none;
+    }
+    .waitlist-input{-webkit-user-select:text;user-select:text;}
+
+    /* Safe area insets — notch / Dynamic Island / home indicator */
+    nav{
+      padding-top:calc(20px + var(--safe-top));
+      padding-left:calc(48px + var(--safe-left));
+      padding-right:calc(48px + var(--safe-right));
+    }
+    #hero{padding-top:calc(160px + var(--safe-top));}
+    footer{padding-bottom:calc(48px + var(--safe-bottom));}
+
+    /* Momentum scrolling on touch */
+    .ticker-wrap,.convo-chat{-webkit-overflow-scrolling:touch;}
+
+    /* Minimum 44×44px tap targets (Apple HIG) */
+    .nav-links a{min-height:44px;display:flex;align-items:center;}
+    .footer-links a{min-height:44px;display:flex;align-items:center;}
+    .btn-nav{min-height:44px;display:inline-flex;align-items:center;}
+    .waitlist-btn{min-height:44px;}
+
+    /* Touch feedback — :active states replace hover on touch devices */
+    .btn-primary:active{transform:scale(.96);opacity:.88;}
+    .btn-ghost:active{color:#fff;border-color:rgba(255,255,255,.35);}
+    .btn-nav:active{opacity:.7;transform:scale(.96);}
+    .app-badge:active{opacity:.75;transform:scale(.97);}
+    .waitlist-btn:active{transform:scale(.96);opacity:.85;}
+    .nav-links a:active{color:#fff;}
+    .footer-links a:active{color:var(--paper-mid);}
+    .stat:active{background:var(--ink-4);}
+    .step:active{background:#1e1e1e;}
+    .card:active{border-color:rgba(216,200,156,.24);background:#1c1c1c;}
+    .card:active::before{opacity:1;}
+    .app-nav-mic:active{transform:scale(.94);box-shadow:0 2px 12px rgba(255,255,255,.12);}
+
+    /* Safe area adjustments for narrow/mobile viewports */
+    @media(max-width:900px){
+      nav{
+        padding-top:calc(16px + var(--safe-top));
+        padding-left:calc(24px + var(--safe-left));
+        padding-right:calc(24px + var(--safe-right));
+      }
+      #hero{padding-top:calc(130px + var(--safe-top));}
+    }
+
+    /* Restore hover effects only on pointer devices (desktop/trackpad — not touch) */
+    @media (hover:hover) and (pointer:fine){
+      .nav-links a:hover{color:#fff;}
+      .btn-nav:hover{opacity:.85;transform:translateY(-1px);}
+      .btn-primary:hover{transform:translateY(-3px);box-shadow:0 16px 48px rgba(216,200,156,.35);}
+      .btn-ghost:hover{color:#fff;border-color:rgba(255,255,255,.35);}
+      .app-badge:hover{border-color:rgba(255,255,255,.45);transform:translateY(-3px);box-shadow:0 10px 36px rgba(0,0,0,.5);}
+      .stat:hover{background:var(--ink-4);}
+      .step:hover{background:#1e1e1e;transform:translateY(-5px);}
+      .card:hover{border-color:rgba(216,200,156,.24);transform:translateY(-7px);background:#1c1c1c;}
+      .card:hover::before{opacity:1;}
+      .app-mic-btn:hover{box-shadow:0 0 0 1px rgba(216,200,156,0.15),0 24px 60px rgba(0,0,0,0.85);}
+      .app-nav-mic:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(255,255,255,.22);}
+      .waitlist-btn:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(216,200,156,.3);}
+      .footer-links a:hover{color:var(--paper-mid);}
+    }
+  </style>
+</head>
+<body>
+
+<!-- Scroll progress bar -->
+<div id="progress"></div>
+
+<!-- Nav — no img, just text wordmark -->
+<nav id="nav">
+  <a href="#" class="nav-logo">
+    <span class="nav-wordmark">BYTE</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#convo">How It Works</a></li>
+    <li><a href="#use-cases">Use Cases</a></li>
+    <li><a href="#demo">Demo</a></li>
+  </ul>
+  <a href="#waitlist" class="btn-nav">Join Waitlist</a>
+</nav>
+
+<!-- Hero -->
+<section id="hero">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="hero-content">
+
+    <div class="hero-badge reveal from-up">
+      <div class="hero-badge-dot"></div>
+      <span class="eyebrow">AI Cooking Assistant — Early Access</span>
+    </div>
+
+    <h1 class="reveal from-up d1">Your Sous Chef.<br><em>Always On.</em></h1>
+
+    <div class="wave-wrap reveal from-up d2" aria-hidden="true">
+      <div class="wave-glow"></div>
+      <div class="pulse-ring"></div>
+      <div class="pulse-ring"></div>
+      <div class="pulse-ring"></div>
+      <div class="wave-bars" id="heroWave"></div>
+      <div class="wave-label">Listening</div>
+    </div>
+
+    <p class="hero-sub reveal from-up d3">
+      <strong>Talk to BYTE while you cook.</strong> Ask questions, narrate what you're adding, or just say what's in the pan — it listens and talks back with real-time guidance before anything goes wrong.
+    </p>
+
+    <div class="hero-cta reveal from-up d4">
+      <a href="#waitlist" class="btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        Join the Waitlist
+      </a>
+      <a href="#demo" class="btn-ghost">See the App</a>
+    </div>
+
+    <div class="store-btns reveal from-up d5">
+      <!-- App Store badge — official style -->
+      <a href="#" class="app-badge" aria-label="Download on the App Store">
+        <div class="app-badge-icon">
+          <svg viewBox="0 0 814 1000" aria-hidden="true">
+            <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.4 172.5 46.4 42.8 0 109.6-49 190.5-49 30.8 0 113.4 2.6 173.5 79.1zm-174.2-141.5c-20.7 26.9-55.1 48.3-89.5 48.3-4.5 0-9-.6-13.5-1.3-2.6-31.3 9-63.3 28.9-85.1 23.7-27.5 62.5-47.8 94.6-49.5.8 4.5 1.3 9 1.3 14.5s-1.3 28.9-21.8 73.1z"/>
+          </svg>
+        </div>
+        <div class="app-badge-text">
+          <span class="app-badge-sub">Download on the</span>
+          <span class="app-badge-name">App Store</span>
+        </div>
+      </a>
+      <!-- Google Play badge — official style -->
+      <a href="#" class="app-badge" aria-label="Get it on Google Play">
+        <div class="app-badge-icon">
+          <svg viewBox="0 0 35 38" width="22" height="22" aria-hidden="true">
+            <path d="M1.5 0.5L18.5 18L1.5 37.5C0.6 37 0 36 0 34.8V3.2C0 2 0.6 1 1.5 0.5Z" fill="#4285F4"/>
+            <path d="M25 12L18.5 18L1.5 0.5L25 12Z" fill="#EA4335"/>
+            <path d="M34 15.5C35.5 16.4 35.5 19.6 34 20.5L25 26L18.5 18L25 12L34 15.5Z" fill="#FBBC04"/>
+            <path d="M1.5 37.5L18.5 18L25 26L1.5 37.5Z" fill="#34A853"/>
+          </svg>
+        </div>
+        <div class="app-badge-text">
+          <span class="app-badge-sub">GET IT ON</span>
+          <span class="app-badge-name">Google Play</span>
+        </div>
+      </a>
+    </div>
+
+  </div>
+  <div class="scroll-hint" aria-hidden="true">
+    <span>Scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- Ticker -->
+<div class="ticker-wrap" aria-hidden="true">
+  <div class="ticker-track">
+    <span class="ticker-item"><span class="ticker-dot"></span>Ask questions mid-cook</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Real-time voice guidance</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Macro &amp; portion tracking</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Temperature alerts</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Hands-free — no screen needed</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Timing precision</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Ingredient substitutions</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Ethnic cuisine support</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Ask questions mid-cook</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Real-time voice guidance</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Macro &amp; portion tracking</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Temperature alerts</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Hands-free — no screen needed</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Timing precision</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Ingredient substitutions</span>
+    <span class="ticker-item"><span class="ticker-dot"></span>Ethnic cuisine support</span>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stat-strip">
+  <div class="stat reveal from-up">
+    <span class="stat-num" data-count="3" data-suffix="s">3s</span>
+    <div class="stat-label">Response Time</div>
+  </div>
+  <div class="stat reveal from-up d1">
+    <span class="stat-num">24/7</span>
+    <div class="stat-label">Always Listening</div>
+  </div>
+  <div class="stat reveal from-up d2">
+    <span class="stat-num" data-count="100" data-suffix="+">100+</span>
+    <div class="stat-label">Cuisine Types</div>
+  </div>
+  <div class="stat reveal from-up d3">
+    <span class="stat-num" data-count="0">0</span>
+    <div class="stat-label">Hands Required</div>
+  </div>
+</div>
+
+<!-- Conversation Section -->
+<section id="convo">
+  <div class="convo-grid">
+
+    <div class="convo-text reveal from-left">
+      <span class="eyebrow">How it works</span>
+      <h2>You talk.<br>BYTE <em>answers.</em></h2>
+      <p>BYTE isn't passive. It's a back-and-forth conversation that happens while your hands are busy. Ask anything. Say what you're adding. Get instant, specific guidance — no Googling, no pausing, no burned garlic.</p>
+    </div>
+
+    <div class="convo-chat reveal from-right">
+      <div class="bubble bubble-user">
+        <span class="user-label">You said</span>
+        "I'm sautéing onions on high heat, how long should I keep going?"
+      </div>
+      <div class="bubble bubble-byte">
+        <span class="byte-label">BYTE</span>
+        About 4 more minutes. Look for translucent edges and slight browning. Turn to medium-high now — high will burn the sugars before they caramelize.
+      </div>
+      <div class="bubble bubble-user">
+        <span class="user-label">You said</span>
+        "Can I swap the olive oil for butter in this?"
+      </div>
+      <div class="bubble bubble-byte warn">
+        <span class="byte-label">⚠ BYTE — heads up</span>
+        Yes, but lower the heat first. Butter burns at 300°F — you're currently above that. Equal substitution works, but you'll get more browning and a richer flavor.
+      </div>
+      <div class="bubble bubble-user">
+        <span class="user-label">You said</span>
+        "Adding garlic now"
+      </div>
+      <div class="bubble bubble-byte">
+        <span class="byte-label">BYTE</span>
+        Good timing. Stir continuously — garlic goes from raw to burnt in under 60 seconds at this temp.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- How It Works -->
+<section id="how">
+  <div class="section-inner">
+    <div class="section-header">
+      <span class="eyebrow reveal from-up">Three steps</span>
+      <h2 class="reveal from-up d1">Simple as <em>cooking</em> should be</h2>
+    </div>
+    <div class="steps-grid">
+
+      <div class="step reveal from-left">
+        <span class="step-num">01</span>
+        <div class="step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+          </svg>
+        </div>
+        <h3>Say it out loud</h3>
+        <p>Ask a question, narrate what you're adding, or describe what's happening on the stove. Speak naturally — BYTE understands context.</p>
+        <div class="step-example">"How long until the chicken is done?" or "I'm adding two cups of flour now"</div>
+      </div>
+
+      <div class="step-arrow reveal from-up d2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>
+
+      <div class="step reveal from-up d2">
+        <span class="step-num">02</span>
+        <div class="step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+            <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3v5z"/>
+            <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3v5z"/>
+          </svg>
+        </div>
+        <h3>BYTE hears & understands</h3>
+        <p>Real-time voice AI processes what you said, what's on the stove, your recipe, and your skill level — all at once.</p>
+        <div class="step-example">Understands context like "this" or "here" without needing full sentences</div>
+      </div>
+
+      <div class="step-arrow reveal from-up d3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>
+
+      <div class="step reveal from-right d3">
+        <span class="step-num">03</span>
+        <div class="step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <h3>Get the answer instantly</h3>
+        <p>BYTE speaks back with specific, actionable guidance — before anything burns, overcooks, or goes wrong. Hands never leave the pan.</p>
+        <div class="step-example">"Lower heat now — your oil is too hot for that technique"</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Use Cases -->
+<section id="use-cases">
+  <div class="section-inner">
+    <div class="section-header">
+      <span class="eyebrow reveal from-up">Who it's for</span>
+      <h2 class="reveal from-up d1">Built for every <em>kind</em> of cook</h2>
+    </div>
+    <div class="cards-grid">
+
+      <div class="card reveal from-left">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="2" y="10.5" width="2" height="3" rx=".5"/><rect x="20" y="10.5" width="2" height="3" rx=".5"/>
+            <rect x="4" y="8.5" width="2.5" height="7" rx="1"/><rect x="17.5" y="8.5" width="2.5" height="7" rx="1"/>
+            <rect x="6.5" y="10" width="11" height="4" rx="1"/>
+          </svg>
+        </div>
+        <h3>Gym Athletes</h3>
+        <p>Ask BYTE to track macros as you cook. "How much protein in 200g of salmon?" — it answers instantly and keeps a running total for the meal.</p>
+        <span class="card-tag">Macro precision</span>
+      </div>
+
+      <div class="card reveal from-right d1">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V7L12 2z"/>
+            <path d="M12 8l1.5 3h3l-2.5 1.75.95 3L12 14.25 9.05 15.75l.95-3L7.5 11h3L12 8z"/>
+          </svg>
+        </div>
+        <h3>Beginners</h3>
+        <p>Ask any "dumb question" while cooking — BYTE never judges. "Is this the right color for caramel?" gets you an immediate honest answer.</p>
+        <span class="card-tag">Confidence building</span>
+      </div>
+
+      <div class="card reveal from-left d2">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6V13.87z"/>
+            <line x1="6" y1="17" x2="18" y2="17"/>
+          </svg>
+        </div>
+        <h3>Ethnic Food Cooks</h3>
+        <p>Traditional recipes passed down orally, no measurements written down. Tell BYTE what you're making — it knows the technique and catches your mistakes.</p>
+        <span class="card-tag">Cultural recipes</span>
+      </div>
+
+      <div class="card reveal from-right d2">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <h3>Busy People</h3>
+        <p>Half-watching a pot while answering emails. BYTE is the part of your brain that remembers the timer, the ratios, and what temperature "medium-high" actually means.</p>
+        <span class="card-tag">Effortless eating</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Demo -->
+<section id="demo">
+  <div class="demo-inner">
+    <div class="demo-text reveal from-left">
+      <span class="eyebrow">The app</span>
+      <h2>Open it.<br><em>Just start talking.</em></h2>
+      <p>No setup, no recipes to load, no typing. Open BYTE, tap the mic, and start cooking. It figures out the rest from what you say.</p>
+      <ul class="demo-features">
+        <li>Tap once to start a session — stays open while you cook</li>
+        <li>Ask anything: substitutions, timing, temperatures, technique</li>
+        <li>Narrate what you're adding — BYTE tracks macros automatically</li>
+        <li>Warns you before mistakes happen, not after</li>
+        <li>Tracks meals, hydration, and daily nutrition without data entry</li>
+      </ul>
+    </div>
+
+    <!-- iPhone — STATIC, no float animation -->
+    <div class="demo-phone reveal from-right">
+      <div class="phone-glow" aria-hidden="true"></div>
+      <div class="iphone">
+        <div class="iphone-island"></div>
+        <div class="app">
+
+          <div class="app-sb">
+            <span class="app-sb-time">1:48 PM</span>
+            <div class="app-sb-icons">
+              <svg width="16" height="10" viewBox="0 0 16 10" fill="white" opacity=".88">
+                <rect x="0" y="6" width="2.5" height="4" rx=".4"/>
+                <rect x="3.5" y="4" width="2.5" height="6" rx=".4"/>
+                <rect x="7" y="2" width="2.5" height="8" rx=".4"/>
+                <rect x="10.5" y="0" width="2.5" height="10" rx=".4"/>
+              </svg>
+              <svg width="14" height="10" viewBox="0 0 22 16" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" opacity=".88">
+                <path d="M1 6c2.7-3.2 6.6-5 10-5s7.3 1.8 10 5"/>
+                <path d="M4.5 9.5c1.8-2 4.1-3.1 6.5-3.1s4.7 1.1 6.5 3.1"/>
+                <path d="M8.5 13c.8-1 1.6-1.5 2.5-1.5s1.7.5 2.5 1.5"/>
+                <circle cx="11" cy="15.5" r="1.2" fill="white" stroke="none"/>
+              </svg>
+              <svg width="24" height="11" viewBox="0 0 26 13" fill="none" stroke="white" stroke-width="1.5" opacity=".88">
+                <rect x="0" y="1" width="21" height="11" rx="2.5"/>
+                <path d="M21 4.5v4a2.5 2.5 0 0 1 0-4z" fill="white" stroke="none"/>
+                <rect x="2.5" y="3" width="13" height="7" rx="1.5" fill="white" stroke="none"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="app-topbar">
+            <span class="app-logo">BYTE</span>
+            <div class="app-burger"><span></span><span></span><span></span></div>
+          </div>
+
+          <div class="app-ctx">Midday Pause &middot; Mon, Apr 27</div>
+          <div class="app-heading">Supreme, what are you making today?</div>
+
+          <div class="app-mic-area">
+            <div class="app-mic-outer">
+              <div class="mic-ring"></div>
+              <div class="mic-ring"></div>
+              <div class="app-mic-btn" id="appMic">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="23"/>
+                  <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+              </div>
+            </div>
+            <div class="app-tap">Tap to speak</div>
+            <div class="app-listening">BYTE IS LISTENING</div>
+          </div>
+
+          <div class="app-hr"></div>
+
+          <div class="app-stats">
+            <div>
+              <div class="app-stat-lbl">Remaining Today</div>
+              <div class="app-stat-val">2000<span class="app-stat-unit">&nbsp;KCAL</span></div>
+            </div>
+            <div class="app-stat-r">
+              <div class="app-stat-lbl">Meals</div>
+              <div class="app-stat-val">0<span style="opacity:.35">/4</span></div>
+            </div>
+          </div>
+
+          <div class="app-hr"></div>
+
+          <div class="app-macros">
+            <div class="app-macro"><div class="macro-ring"><span class="macro-v">0</span><span class="macro-u">g</span></div><span class="macro-n">Protein</span></div>
+            <div class="app-macro"><div class="macro-ring"><span class="macro-v">0</span><span class="macro-u">g</span></div><span class="macro-n">Carbs</span></div>
+            <div class="app-macro"><div class="macro-ring"><span class="macro-v">0</span><span class="macro-u">g</span></div><span class="macro-n">Fat</span></div>
+          </div>
+
+          <div class="app-nav">
+            <div class="app-nav-item on">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 9v11h6v-6h8v6h6V9L12 2z"/></svg>
+              <span>Home</span>
+            </div>
+            <div class="app-nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 8C8 10 5.9 16.17 3.82 19.34A1 1 0 0 0 4.69 21h10.19a1 1 0 0 0 .93-.63C17.2 16.93 19 12 17 8z"/><path d="M17 8a5 5 0 0 0-5-5"/></svg>
+              <span>Meals</span>
+            </div>
+            <div class="app-nav-mic" id="navMic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+            </div>
+            <div class="app-nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2c0 6-6 7-6 12a6 6 0 0 0 12 0c0-5-6-6-6-12z"/></svg>
+              <span>Rhythm</span>
+            </div>
+            <div class="app-nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+              <span>Profile</span>
+            </div>
+          </div>
+
+        </div><!-- /app -->
+      </div><!-- /iphone -->
+    </div>
+  </div>
+</section>
+
+<!-- Waitlist -->
+<section id="waitlist">
+  <div class="waitlist-inner">
+    <span class="eyebrow reveal from-up">Early access</span>
+    <h2 class="reveal from-up d1">Be the First to<br><em>Cook Smarter</em></h2>
+    <p class="waitlist-sub reveal from-up d2">BYTE is launching to a small group first. Drop your email and we'll reach out before the public release.</p>
+    <div class="reveal from-scale d3">
+      <form class="waitlist-form" id="waitlistForm" novalidate>
+        <input type="email" class="waitlist-input" id="waitlistEmail" placeholder="your@email.com" autocomplete="email" required />
+        <button type="submit" class="waitlist-btn">Join Now</button>
+      </form>
+      <p class="waitlist-note">No spam. No noise. Just your invite when it's ready.</p>
+      <div class="waitlist-success" id="waitlistSuccess" role="alert">
+        <div class="success-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <h3>You're on the list.</h3>
+        <p>We'll be in touch before public launch.</p>
+      </div>
+    </div>
+    <div class="waitlist-stores reveal from-up d4">
+      <p class="waitlist-stores-label">Coming soon to</p>
+      <div class="store-btns">
+        <a href="#" class="app-badge">
+          <div class="app-badge-icon">
+            <svg viewBox="0 0 814 1000"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.4 172.5 46.4 42.8 0 109.6-49 190.5-49 30.8 0 113.4 2.6 173.5 79.1zm-174.2-141.5c-20.7 26.9-55.1 48.3-89.5 48.3-4.5 0-9-.6-13.5-1.3-2.6-31.3 9-63.3 28.9-85.1 23.7-27.5 62.5-47.8 94.6-49.5.8 4.5 1.3 9 1.3 14.5s-1.3 28.9-21.8 73.1z"/></svg>
+          </div>
+          <div class="app-badge-text">
+            <span class="app-badge-sub">Download on the</span>
+            <span class="app-badge-name">App Store</span>
+          </div>
+        </a>
+        <a href="#" class="app-badge">
+          <div class="app-badge-icon">
+            <svg viewBox="0 0 35 38" width="22" height="22">
+              <path d="M1.5 0.5L18.5 18L1.5 37.5C0.6 37 0 36 0 34.8V3.2C0 2 0.6 1 1.5 0.5Z" fill="#4285F4"/>
+              <path d="M25 12L18.5 18L1.5 0.5L25 12Z" fill="#EA4335"/>
+              <path d="M34 15.5C35.5 16.4 35.5 19.6 34 20.5L25 26L18.5 18L25 12L34 15.5Z" fill="#FBBC04"/>
+              <path d="M1.5 37.5L18.5 18L25 26L1.5 37.5Z" fill="#34A853"/>
+            </svg>
+          </div>
+          <div class="app-badge-text">
+            <span class="app-badge-sub">GET IT ON</span>
+            <span class="app-badge-name">Google Play</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-brand">
+    <span class="footer-wm">BYTE</span>
+    <span class="footer-tag">Your Sous Chef. Always On.</span>
+  </div>
+  <ul class="footer-links">
+    <li><a href="#">Privacy</a></li>
+    <li><a href="#">Terms</a></li>
+    <li><a href="mailto:hello@bytenutrition.app">Contact</a></li>
+  </ul>
+  <span class="footer-copy">© 2025 BYTE Nutrition. All rights reserved.</span>
+</footer>
+
+<script>
+/* ── Hero waveform ── */
+(function(){
+  const c=document.getElementById('heroWave');
+  const pk=[12,28,52,38,72,58,34,68,88,56,28,78,50,66,42,92,62,44,76,36,64,82,50,60,72,40,86,54,46,78,66,40,60,80,52,70,58,34,66,48];
+  const mn=[4,8,14,10,20,16,8,18,24,14,8,22,14,18,10,28,16,12,20,10,18,22,14,16,20,10,24,14,12,22,18,10,16,22,14,18,14,8,18,12];
+  pk.forEach((p,i)=>{
+    const b=document.createElement('div');
+    b.className='wave-bar';
+    b.style.setProperty('--pk',p+'px');
+    b.style.setProperty('--mn',mn[i]+'px');
+    b.style.setProperty('--dur',(0.85+(i%7)*0.08)+'s');
+    b.style.setProperty('--dl',(i*0.055)+'s');
+    c.appendChild(b);
+  });
+})();
+
+/* ── Scroll reveal ── */
+const revealObs = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.classList.add('visible');
+      revealObs.unobserve(e.target);
+    }
+  });
+},{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
+// Hero elements reveal immediately on load
+document.querySelectorAll('.reveal').forEach(el=>{
+  const rect=el.getBoundingClientRect();
+  if(rect.top < window.innerHeight * 0.9){
+    setTimeout(()=>el.classList.add('visible'),100);
+  } else {
+    revealObs.observe(el);
+  }
+});
+
+/* ── Stat counter ── */
+const counterObs = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(!e.isIntersecting)return;
+    const el=e.target;
+    const target=parseInt(el.dataset.count);
+    const suffix=el.dataset.suffix||'';
+    if(isNaN(target))return;
+    const dur=1400,t0=performance.now();
+    function tick(now){
+      const p=Math.min((now-t0)/dur,1);
+      const eased=1-Math.pow(1-p,3);
+      el.textContent=Math.floor(eased*target)+suffix;
+      if(p<1)requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+    counterObs.unobserve(el);
+  });
+},{threshold:0.5});
+document.querySelectorAll('[data-count]').forEach(el=>counterObs.observe(el));
+
+/* ── Scroll progress + nav + parallax ── */
+let ticking=false;
+window.addEventListener('scroll',()=>{
+  if(ticking)return;
+  ticking=true;
+  requestAnimationFrame(()=>{
+    const sy=window.scrollY;
+    const docH=document.documentElement.scrollHeight-window.innerHeight;
+    document.getElementById('progress').style.width=(sy/docH*100)+'%';
+    document.getElementById('nav').style.paddingTop=sy>40?'calc(12px + var(--safe-top))':'calc(20px + var(--safe-top))';
+    // Parallax hero bg only
+    const bg=document.querySelector('.hero-bg');
+    if(bg&&sy<window.innerHeight) bg.style.transform=`translateY(${sy*0.2}px)`;
+    ticking=false;
+  });
+},{passive:true});
+
+/* ── Card 3D tilt ── */
+document.querySelectorAll('.card').forEach(card=>{
+  card.addEventListener('mousemove',e=>{
+    const r=card.getBoundingClientRect();
+    const x=((e.clientX-r.left)/r.width-.5)*9;
+    const y=((e.clientY-r.top)/r.height-.5)*9;
+    card.style.transform=`translateY(-7px) rotateX(${-y}deg) rotateY(${x}deg)`;
+    card.style.transition='transform .08s';
+  });
+  card.addEventListener('mouseleave',()=>{
+    card.style.transform='';
+    card.style.transition='transform .5s var(--spring)';
+  });
+});
+
+/* ── App mic button tap animation ── */
+const mic=document.getElementById('appMic');
+const navMic=document.getElementById('navMic');
+let micActive=false;
+function toggleMic(){
+  micActive=!micActive;
+  mic.style.background=micActive
+    ?'radial-gradient(circle at 38% 32%, #3a2e1e 0%, #2a2010 45%, #1a1408 100%)'
+    :'radial-gradient(circle at 38% 32%, #2c2c2c 0%, #1a1a1a 45%, #0e0e0e 100%)';
+  mic.style.boxShadow=micActive
+    ?'0 0 0 1px rgba(216,200,156,0.3), 0 24px 60px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.06)'
+    :'0 0 0 1px rgba(255,255,255,0.05), 0 24px 60px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.06)';
+}
+if(mic) mic.addEventListener('click',toggleMic);
+if(navMic) navMic.addEventListener('click',toggleMic);
+
+/* ── Waitlist ── */
+document.getElementById('waitlistForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  const email=document.getElementById('waitlistEmail').value.trim();
+  if(!email||!email.includes('@')){
+    document.getElementById('waitlistEmail').style.borderColor='rgba(255,100,80,0.5)';
+    return;
+  }
+  this.style.display='none';
+  document.getElementById('waitlistSuccess').classList.add('show');
+});
+</script>
+</body>
 </html>
