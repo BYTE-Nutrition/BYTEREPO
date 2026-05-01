@@ -61,7 +61,7 @@ function pushSessionInstructions(dc: RTCDataChannel, instructions: string) {
   dc.send(
     JSON.stringify({
       type: 'session.update',
-      session: { instructions: text },
+      session: { type: 'realtime', instructions: text },
     }),
   )
 }

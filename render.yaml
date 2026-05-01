@@ -12,6 +12,24 @@ version: "1"
 
 services:
   - type: web
+    name: byte-realtime-proxy
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: realtime-proxy
+    buildCommand: npm install
+    startCommand: node index.mjs
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_REALTIME_MODEL
+        value: gpt-realtime-mini
+      - key: OPENAI_REALTIME_VOICE
+        value: marin
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+  - type: web
     name: byte-meal-parse
     runtime: python
     plan: free
