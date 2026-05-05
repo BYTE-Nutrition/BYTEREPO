@@ -1,14 +1,7 @@
-# Main UI: Vite + React Router in app/. SPA routing uses app/public/_redirects → dist/_redirects.
-# OpenAI Realtime + meal-parse live in netlify/functions/ (repo root); paths /realtime/session and /meal-parse.
+# Marketing site: static HTML in website/ — no build step, no Supabase needed.
+# The React app lives in app/ and can be hosted separately (e.g. a second Netlify site).
 [build]
-  base = "app"
-  command = "npm ci && npm run build"
-  publish = "dist"
+  publish = "website"
 
 [build.environment]
   NODE_VERSION = "22"
-
-# With base = "app", this path is resolved from app/ — use ../ so functions live at repo root.
-[functions]
-  directory = "../netlify/functions"
-  node_bundler = "esbuild"
