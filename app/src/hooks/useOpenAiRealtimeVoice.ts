@@ -401,11 +401,12 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
     const ac = new AbortController()
     connectAbortRef.current = ac
 
-    let pc: RTCPeerConnection
+    let attemptPc: RTCPeerConnection | undefined
     try {
-      pc = new RTCPeerConnection({
+      const pc = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
       })
+      attemptPc = pc
       pcRef.current = pc
 
       pc.ontrack = (e) => {
@@ -508,7 +509,7 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
       // the AbortError raised when the user simply closed the capture mid-flight.
       // That painted a red "Voice unavailable" banner over what was really a
       // user-initiated cancel. Treat aborted/superseded attempts as a no-op.
-      if (ac.signal.aborted || pcRef.current !== pc) return
+      if (ac.signal.aborted || (attemptPc !== undefined && pcRef.current !== attemptPc)) return
       disconnect()
       const msg = connectErrorMessage(e)
       setLastError(msg)
