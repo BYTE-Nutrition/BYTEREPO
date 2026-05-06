@@ -10,6 +10,7 @@ import { MealsPage } from '@/pages/MealsPage'
 import { OnboardingPage } from '@/pages/OnboardingPage'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { ProgressPage } from '@/pages/ProgressPage'
+import { AuthCallbackPage } from '@/pages/AuthCallbackPage'
 import { SignInPage } from '@/pages/SignInPage'
 import { VoicePage } from '@/pages/VoicePage'
 
@@ -22,6 +23,7 @@ export default function App() {
           <VoiceEntryProvider>
             <Layout>
               <Routes>
+                <Route path="/auth/callback" element={<AuthCallbackPage />} />
                 <Route path="/signin" element={<SignInPage />} />
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/onboarding" element={<OnboardingPage />} />
