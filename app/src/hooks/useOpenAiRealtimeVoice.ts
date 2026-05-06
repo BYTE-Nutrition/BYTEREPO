@@ -166,21 +166,6 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
             ? String((event.error as { message?: unknown }).message ?? 'Realtime error')
             : 'Realtime error'
         setLastError(msg)
-        // #region agent log
-        fetch('http://127.0.0.1:7630/ingest/869a58af-96c5-49f4-bbdd-a35babd1f94f', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'cb3770' },
-          body: JSON.stringify({
-            sessionId: 'cb3770',
-            runId: 'pre-fix',
-            hypothesisId: 'H1',
-            location: 'useOpenAiRealtimeVoice.ts:handleDataMessage:error-event',
-            message: 'Realtime data-channel type=error (may be non-fatal while session stays live)',
-            data: { msgLen: msg.length, msgPreview: msg.slice(0, 120) },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {})
-        // #endregion
         onError?.(msg)
         return
       }
@@ -514,21 +499,6 @@ export function useOpenAiRealtimeVoice(options: UseOpenAiRealtimeVoiceOptions) {
       const msg = connectErrorMessage(e)
       setLastError(msg)
       setStatus('error')
-      // #region agent log
-      fetch('http://127.0.0.1:7630/ingest/869a58af-96c5-49f4-bbdd-a35babd1f94f', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'cb3770' },
-        body: JSON.stringify({
-          sessionId: 'cb3770',
-          runId: 'pre-fix',
-          hypothesisId: 'H4',
-          location: 'useOpenAiRealtimeVoice.ts:connect:catch',
-          message: 'connect() failed — onError invoked, status set to error',
-          data: { msgLen: msg.length, msgPreview: msg.slice(0, 120) },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {})
-      // #endregion
       onError?.(msg)
     }
   }, [audioRef, disconnect, goalsHeader, handleDataMessage, onError, sessionUrl, takePrimedStream])

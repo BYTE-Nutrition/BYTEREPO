@@ -87,21 +87,6 @@ export function VoicePage() {
 
   const speech = useSpeechRecognition({
     onError: (msg) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7630/ingest/869a58af-96c5-49f4-bbdd-a35babd1f94f', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'cb3770' },
-        body: JSON.stringify({
-          sessionId: 'cb3770',
-          runId: 'pre-fix',
-          hypothesisId: 'H3',
-          location: 'VoicePage.tsx:speech.onError',
-          message: 'Web Speech API error (unrelated to Realtime unless same banner text)',
-          data: { msgLen: msg.length, msgPreview: msg.slice(0, 120) },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {})
-      // #endregion
       setError(msg)
     },
   })
@@ -115,22 +100,7 @@ export function VoicePage() {
     goalsHeader: realtimeGoalsHeader,
     mealLiveItems: liveItems,
     coachTranscriptFallback,
-    onError: (msg) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7630/ingest/869a58af-96c5-49f4-bbdd-a35babd1f94f', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'cb3770' },
-        body: JSON.stringify({
-          sessionId: 'cb3770',
-          runId: 'pre-fix',
-          hypothesisId: 'H1',
-          location: 'VoicePage.tsx:realtime.onError',
-          message: 'VoicePage maps all hook onError to generic banner',
-          data: { incomingMsgLen: msg?.length ?? 0, incomingPreview: String(msg ?? '').slice(0, 120) },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {})
-      // #endregion
+    onError: () => {
       setError(VOICE_UNAVAILABLE_MSG)
     },
   })
@@ -150,21 +120,6 @@ export function VoicePage() {
 
   useEffect(() => {
     if (showImmersive && !realtimeConfigured) {
-      // #region agent log
-      fetch('http://127.0.0.1:7630/ingest/869a58af-96c5-49f4-bbdd-a35babd1f94f', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'cb3770' },
-        body: JSON.stringify({
-          sessionId: 'cb3770',
-          runId: 'pre-fix',
-          hypothesisId: 'H2',
-          location: 'VoicePage.tsx:useEffect:!realtimeConfigured',
-          message: 'Immersive shown but VITE_REALTIME_SESSION_URL empty — set generic error',
-          data: { showImmersive, realtimeConfigured },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {})
-      // #endregion
       setError(VOICE_UNAVAILABLE_MSG)
     }
   }, [showImmersive, realtimeConfigured])
