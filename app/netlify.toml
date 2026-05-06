@@ -1,0 +1,13 @@
+# Byte cooking app — Vite SPA + serverless voice/meal-parse functions.
+# This file is read when the byte-cooking Netlify site sets base = "app".
+[build]
+  command = "npm install && npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Functions live at the repo root, one level up from this base directory.
+[functions]
+  directory = "../netlify/functions"
+  node_bundler = "esbuild"
